@@ -1,10 +1,10 @@
 all: build-rpc build-dnode build-hub
 
 build-rpc:
-	g++ rpc.cpp `find util -name "*.cpp"` -o bin/rpc
+	g++ src/rpc.cpp `find src/common -name "*.cpp"` -o bin/rpc
 
 build-dnode:
-	g++ dnode.cpp `find util -name "*.cpp"` -o bin/dnode
+	g++ src/dnode.cpp `find src/common -name "*.cpp"` -o bin/dnode
 
 build-hub:
-	g++ hub.cpp `find util -name "*.cpp"` -o bin/hub
+	g++ src/hub.cpp `find src/common -name "*.cpp"` -o bin/hub
