@@ -3,13 +3,18 @@
 #define _DNODE_H_
 
 #include <stdint.h>
-#include <string>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
-using namespace std;
+#define RPC_COMMAND_UPLOAD 0x01
+#define RPC_COMMAND_DOWNLOAD 0x02
+#define RPC_COMMAND_KILL 0x03
+
 
 struct dnode_details {
-    char* hub_ip;
+    struct in_addr hub_ip;
     int hub_port;
+    struct in_addr dnode_ip;
     int hub_cmd_port;
     int dnode_data_port;
     int rpc_port;

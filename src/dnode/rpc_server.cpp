@@ -17,9 +17,9 @@
 
 #include "dnode.h"
 #include "rpc_server.h"
-#include "../commands.h"
-#include "../hash.h"
-#include "../netcalls.h"
+
+#include "../util/hash.h"
+#include "../util/net.h"
 
 
 // server process 3 (listens for rfc requests)
@@ -110,6 +110,9 @@ void handle_rpc_server(struct dnode_details *node_details) {
             fwrite(d, 1, fsz+1, fw);
             // ifstream infile;
             // infile.open(file_path, ios::binary | ios::in);
+
+
+            
 
         }
 

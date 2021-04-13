@@ -19,8 +19,9 @@ listens for rfc commands via rfc_port
 
 #include <string>
 
-#include "common/dnode/dnode.h"
-#include "common/dnode/rpc_server.h"
+#include "dnode/dnode.h"
+#include "dnode/rpc_server.h"
+#include "hub/hub.h"
 
 using namespace std;
 
@@ -55,10 +56,12 @@ int main(int argc, char* argv[]) {
 
     string hub_ip_port(argv[2]);
     int del_pos = hub_ip_port.find(":");
-    string hub_ip = hub_ip_port.substr(0, del_pos);
-    int hub_port = stoi(hub_ip_port.substr(del_pos+1, hub_ip_port.size()));
-    node_details.hub_ip = (char *)calloc(hub_ip.size() + 1, sizeof(char));
-    node_details.hub_port = hub_port;
+    string hub_ip_str = hub_ip_port.substr(0, del_pos);
+    string hub_port_str = hub_ip_port.substr(del_pos+1, hub_ip_port.size());
+
+    inet_aton("localhost", &(node_details.dnode_ip));
+    inet_aton(hub_ip_str.c_str(), &(node_details.hub_ip));
+    node_details.hub_port = stoi(hub_port_str);
 
     node_details.hub_cmd_port = atoi(argv[3]);
     node_details.dnode_data_port = atoi(argv[4]);
@@ -68,7 +71,7 @@ int main(int argc, char* argv[]) {
     string files_dir = dnode_dir + string("/files");
 
     // fill up node details
-    node_details.uid = 4;
+    node_details.uid = (uint64_t)rand();
     node_details.root_dir = (char *)calloc(root_dir.size()+1, sizeof(char));
     node_details.files_dir = (char *)calloc(files_dir.size() + 1, sizeof(char));
 
@@ -78,7 +81,39 @@ int main(int argc, char* argv[]) {
     std::cout << "root dir : " << node_details.root_dir << endl;
     std::cout << "files dir : " << node_details.files_dir << endl;
 
+    char dnode_buf[2048];
 
+    // send a join request to hub
+    int hub_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (hub_sockfd < 0) {
+		perror("Unable to create socket\n");
+		exit(0);
+	}
+    
+    struct sockaddr_in hub_addr;
+    hub_addr.sin_family	= AF_INET;
+    hub_addr.sin_addr = node_details.hub_ip;
+    hub_addr.sin_port = htons((short)node_details.hub_port);
+    
+	if (connect(hub_sockfd, (struct sockaddr *)&hub_addr, sizeof(hub_addr)) < 0) {
+        perror("Unable to connect to hub!!");
+        exit(0);
+    }
+
+    struct node_join_struct node_join_details;
+    node_join_details.uid = node_details.uid;
+    node_join_details.ip = node_details.dnode_ip;
+    node_join_details.port = node_details.dnode_data_port;
+    node_join_details.flags = 0;
+
+    uint16_t command  = NODE_JOIN;
+    memcpy(dnode_buf, &command, sizeof(command));
+    memcpy(dnode_buf + 2, &node_join_details, sizeof(node_join_details));
+    int payload_len = 2 + sizeof(node_join_details);
+    send(hub_sockfd, dnode_buf, payload_len, 0);
+    close(hub_sockfd);
+
+    
     
     // if (fork() == 0) {
     //     handle_hub_server(hub_port);

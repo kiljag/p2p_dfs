@@ -10,7 +10,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "netcalls.h"
+#include "net.h"
 
 int create_server(int port) {
 
