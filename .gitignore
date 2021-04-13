@@ -1,4 +1,6 @@
 ref/*
+bin/*
+test/*
 dnode
 hub
 rfc
