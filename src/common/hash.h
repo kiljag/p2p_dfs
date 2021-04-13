@@ -7,17 +7,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct hash {
+struct fhash {
     uint64_t a;
     uint64_t b;
     uint64_t c;
     uint64_t d;
 };
 
-struct hash compute_hash(void * data, size_t l);
+struct fhash compute_hash(void * data, size_t l);
 
-uint64_t reduce_hash(struct hash *hash);
+uint64_t reduce_hash(struct fhash *h1);
 
-int compare_hashes(struct hash *hash1, struct hash);
+int compare_hashes(struct fhash *hash1, struct fhash *hash2);
 
 #endif

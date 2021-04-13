@@ -1,3 +1,4 @@
+
 #include "hash.h"
 
 /*
@@ -5,10 +6,10 @@ To do, we should be able to compute hash on data with any size, not just a multi
 of 64 bits (need to padd the data)
 */
 
-struct hash compute_hash(void * data, size_t l)
+struct fhash compute_hash(void * data, size_t l)
 {
   uint32_t i;
-  struct hash hstrct = {0};
+  struct fhash hstrct = {0};
   uint64_t * d = (uint64_t *)data;
   const uint64_t fnv_prime = 1099511628211ull;
   hstrct.a = 14695981039346656037ull;
@@ -27,10 +28,10 @@ struct hash compute_hash(void * data, size_t l)
 }
 
 
-uint64_t rerduce_hash(struct hash * h1) {
+uint64_t reduce_hash(struct fhash * h1) {
     return (h1->a) ^ (h1->b) ^ (h1->c) ^ (h1->d);
 }
 
-int compare_hashes(struct hash *h1, struct hash *h2) {
+int compare_hashes(struct fhash *h1, struct fhash *h2) {
     return (h1->a == h2->a) && (h1->b && h2->b) && (h1->c && h2->c) && (h1->d && h1->d); 
 }

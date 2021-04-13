@@ -1,7 +1,6 @@
 .vscode/*
 ref/*
+samples/*
 bin/*
 test/*
-dnode
-hub
-rfc
+
