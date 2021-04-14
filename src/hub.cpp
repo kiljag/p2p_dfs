@@ -94,22 +94,25 @@ int main(int argc, char** argv) {
             node_join_res.uid = ruid;
             send(newsockfd, &node_join_res, sizeof(node_join_res), 0);
         } 
-        // else if (command == FILE_UPLOAD) {
-            
-        //     std::cout << "Hub :: File upload" << std::endl;
-        //     struct file_upload_struct file_upload_details;
-        //     memcpy(&file_upload_details, buffer+2, sizeof(struct file_upload_struct));
-        //     uint64_t dnode_id  = file_upload_details.data_node_uid;
-        //     uint64_t fhash = file_upload_details.file_hash;
-            
-        //     // if the fhash entry is absent
-        //     if (fhash_map.find(fhash) == fhash_map.end()) {
-        //         fhash_map[fhash] = vector<uint64_t>();
-        //         fhash_map[fhash].push_back(dnode_id);
-        //     }
 
-        // } else if (command == FILE_DOWNLOAD) {
+        else if (hub_cmd.cmd_type == FILE_UPLOAD) {
+            
+            std::cout << "Hub :: File upload" << std::endl;
+            struct file_upload_req_struct file_upload_req;
+            recv(newsockfd, &file_upload_req, sizeof(file_upload_req), 0);
+            uint64_t dnode_id  = file_upload_req.data_node_uid;
+            uint64_t fhash = file_upload_req.file_hash;
+            
+            // if the fhash entry is absent
+            if (fhash_map.find(fhash) == fhash_map.end()) {
+                fhash_map[fhash] = vector<uint64_t>();
+                fhash_map[fhash].push_back(dnode_id);
+            }
 
+        }
+
+        // else if (command == FILE_DOWNLOAD) {
+            
         //     struct file_download_struct file_download_details;
         //     memcpy(&file_download_details, buffer+2, sizeof(struct file_download_struct));
 

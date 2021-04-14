@@ -93,15 +93,38 @@ void handle_rpc_server(struct dnode_details_struct *dnode_details) {
             file_upload_req.data_node_uid = dnode_details->uid;
             file_upload_req.file_hash = file_hash;
             file_upload_req.file_index_data_len = 0;
-
-            send(newsockfd, &hub_cmd, sizeof(hub_cmd), 0);
-            send(newsockfd, &file_upload_req, sizeof(file_upload_req), 0);
             
+            // create a socket to contact hub
+            int hub_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+            if (hub_sockfd < 0) {
+                perror("Unable to create hub socket\n");
+                exit(0);
+            }
+    
+            struct sockaddr_in hub_addr;
+            hub_addr.sin_family	= AF_INET;
+            inet_aton("127.0.0.1", &hub_addr.sin_addr);
+            // hub_addr.sin_addr = dnode_details.hub_ip;
+            hub_addr.sin_port = htons(dnode_details->hub_port);
+    
+            // connect to hub
+            if (connect(hub_sockfd, (struct sockaddr *)&hub_addr, sizeof(hub_addr)) < 0) {
+                perror("Unable to connect to hub!!");
+                exit(0);
+            }
+
+            std::cout << "uploading file metadata to hub.." << std::endl;
+            send(hub_sockfd, &hub_cmd, sizeof(hub_cmd), 0);
+            send(hub_sockfd, &file_upload_req, sizeof(file_upload_req), 0);
+
+            close(hub_sockfd);
+
             // save the file in dnode files directory
             std::cout << "out file patth " << out_path << std::endl;
             size_t bytes_written = fwrite_full(out_path.c_str(), file_buff, file_len);
             std::cout << "bytes written  :: " << bytes_written << std::endl;
             
+
 
         } else if (rpc_cmd.cmd_type == RPC_COMMAND_DOWNLOAD) {
             std::cout << "RPC download command " << std::endl;
