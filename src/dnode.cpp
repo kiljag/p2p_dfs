@@ -21,6 +21,8 @@ listens for rfc commands via rfc_port
 
 #include "dnode/dnode.h"
 #include "dnode/rpc_server.h"
+#include "dnode/data_server.h"
+
 #include "hub/hub.h"
 #include "util/net.h"
 
@@ -29,17 +31,7 @@ using namespace std;
 struct dnode_details_struct dnode_details;
 
 
-// server process 1 (listens for hub requests)
-void handle_hub_server(int hub_port) {
-    /*TO DO :  incase a hub wants to initiate message connection with a dnode*/
-    std::exit(0);
-}
 
-
-// server process 2 (listens for dnode data requests)
-void handle_dnode_server(int dnode_port) {
-    return;
-}
 
 void handle_node_join() {
 
@@ -69,12 +61,6 @@ void handle_node_join() {
     node_join_req.ip = dnode_details.dnode_ip;
     node_join_req.port = dnode_details.dnode_data_port;
     node_join_req.flags = 0;
-
-    // uint16_t command  = NODE_JOIN;
-    // memcpy(dnode_buf, &command, sizeof(command));
-    // memcpy(dnode_buf + 2, &node_join_req, sizeof(node_join_req));
-    // int payload_len = 2 + sizeof(node_join_req);
-    // send(hub_sockfd, dnode_buf, payload_len, 0);
 
     send(hub_sockfd, &hub_cmd, sizeof(hub_cmd), 0);
     send(hub_sockfd, &node_join_req, sizeof(node_join_req), 0);
@@ -138,45 +124,14 @@ int main(int argc, char* argv[]) {
     
     // char dnode_buf[2048];
 
-    // // send a join request to hub
-    // int hub_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    // if (hub_sockfd < 0) {
-	// 	perror("Unable to create socket\n");
-	// 	exit(0);
-	// }
-    
-    // struct sockaddr_in hub_addr;
-    // hub_addr.sin_family	= AF_INET;
-    // hub_addr.sin_addr = node_details.hub_ip;
-    // hub_addr.sin_port = htons((short)node_details.hub_port);
-    
-	// if (connect(hub_sockfd, (struct sockaddr *)&hub_addr, sizeof(hub_addr)) < 0) {
-    //     perror("Unable to connect to hub!!");
-    //     exit(0);
-    // }
-
-    // struct node_join_req_struct node_join_req;
-    // node_join_req.uid = node_details.uid;
-    // node_join_req.ip = node_details.dnode_ip;
-    // node_join_req.port = node_details.dnode_data_port;
-    // node_join_req.flags = 0;
-
-    // uint16_t command  = NODE_JOIN;
-    // memcpy(dnode_buf, &command, sizeof(command));
-    // memcpy(dnode_buf + 2, &node_join_req, sizeof(node_join_req));
-    // int payload_len = 2 + sizeof(node_join_req);
-    // send(hub_sockfd, dnode_buf, payload_len, 0);
-    // close(hub_sockfd);
-
-    
-    
     // if (fork() == 0) {
     //     handle_hub_server(hub_port);
     // }
 
-    // if (fork() == 0) {
-    //     handle_dnode_server(dnode_port);
-    // }
+    pid_t data_server_port = fork();
+    if (data_server_port == 0) {
+        handle_data_server(&dnode_details);
+    }
 
 
     pid_t rpc_server_pid = fork();

@@ -23,6 +23,126 @@
 #include "../util/net.h"
 #include "../util/fs.h"
 
+void handle_file_upload(struct dnode_details_struct *dnode_details, int rpc_cli_fd, char *file_path) {
+
+    int file_len = get_file_size(file_path);
+    std::cout << "in_file_path : " << file_path << std::endl;
+    std::cout << "file size : " << file_len << std::endl;
+
+    string file_path_str(file_path);
+    string file_name_str = file_path_str.substr(file_path_str.find_last_of("/") + 1, file_path_str.size());
+    string out_path = string(dnode_details->files_dir) + string("/") + file_name_str;
+
+    uint8_t *file_buff = (uint8_t *)malloc(file_len);
+    size_t bytes_read = fread_full(file_path, file_buff, file_len);
+    std::cout << "bytes read :: " << bytes_read << std::endl;
+
+    // compute file hash
+    struct fhash h = compute_hash(file_buff, file_len);
+    // printf("%016lx%016lx%016lx%016lx\n", h.a, h.b, h.c, h.d);
+    uint64_t file_hash = reduce_hash(&h);
+    printf("file hash : %016lx\n", file_hash);
+
+    // send the file hash to the hub
+    struct hub_cmd_struct hub_cmd;
+    hub_cmd.cmd_type = FILE_UPLOAD;
+
+    // calculate the file index data /* TODO */
+
+    // fill the file upload request details
+    struct file_upload_req_struct file_upload_req;
+    file_upload_req.data_node_uid = dnode_details->uid;
+    file_upload_req.file_hash = file_hash;
+    file_upload_req.file_index_data_len = 0;
+    memcpy(file_upload_req.file_name, file_name_str.c_str(), file_name_str.size() + 1);
+    file_upload_req.num_chunks = 0; // need to calculate 
+
+    // connect to hub
+    int hub_sockfd = connect_to_server(dnode_details->hub_ip, dnode_details->hub_port);
+    std::cout << "uploading file metadata to hub.." << std::endl;
+    send(hub_sockfd, &hub_cmd, sizeof(hub_cmd), 0);
+    send(hub_sockfd, &file_upload_req, sizeof(file_upload_req), 0);
+
+    // disconnect from hub
+    disconnect_from_server(hub_sockfd);
+
+    // save the file in dnode files directory
+    std::cout << "out file patth " << out_path << std::endl;
+    size_t bytes_written = fwrite_full(out_path.c_str(), file_buff, file_len);
+    std::cout << "bytes written  :: " << bytes_written << std::endl;
+
+    return;
+}
+
+void handle_file_download(struct dnode_details_struct *dnode_details, int rpc_cli_fd, char *file_name) {
+
+    string file_name_str(file_name);
+    string out_path = string(dnode_details->files_dir) + string("/") + file_name_str;
+
+    struct hub_cmd_struct hub_cmd;
+    hub_cmd.cmd_type = FILE_DOWNLOAD;
+
+    // fill file download request details
+    struct file_download_req_struct file_download_req;
+    file_download_req.dnode_uid = dnode_details->uid;
+    memcpy(file_download_req.file_name, file_name, strlen(file_name) + 1);
+
+    // connect to hub
+    int hub_sockfd = connect_to_server(dnode_details->hub_ip, dnode_details->hub_port);
+
+    send(hub_sockfd, &hub_cmd, sizeof(hub_cmd), 0);
+    send(hub_sockfd, &file_download_req, sizeof(file_download_req), 0);
+
+    // recv file download response from server
+    struct file_download_res_struct file_download_res;
+    recv(hub_sockfd, &file_download_res, sizeof(file_download_res), 0);
+    int num_peer_dnodes = file_download_res.num_peer_dnodes;
+    int file_index_data_len = file_download_res.file_index_data_len;
+    std::cout << "num peer dnodes : " << num_peer_dnodes << std::endl;
+
+    // recv peer dnodes data and file index data from hub
+    struct peer_dnode_struct * peer_dnode_list;
+    peer_dnode_list = (struct peer_dnode_struct *)malloc(sizeof(struct peer_dnode_struct) * num_peer_dnodes);
+    uint8_t *file_index_data = (uint8_t *)malloc(file_index_data_len);
+
+    read_full(hub_sockfd, peer_dnode_list, sizeof(struct peer_dnode_struct) * num_peer_dnodes);
+    if (file_index_data_len > 0) {
+        read_full(hub_sockfd, file_index_data, file_index_data_len);
+    }
+
+    // retrieve first peer details
+    struct in_addr peer_ip = peer_dnode_list[0].ip;
+    short peer_port = peer_dnode_list[0].port;
+
+    int file_hash = file_download_res.file_metadata.file_hash;
+    int file_size = file_download_res.file_metadata.file_size;
+    uint8_t* file_data = (uint8_t *)malloc(file_size);
+    
+    // connect to peer
+    int peer_fd = connect_to_server(peer_ip, peer_port);
+
+    // fill data request details
+    file_data_req_struct file_data_req;
+    file_data_req.file_hash = file_hash;
+    memcpy(file_data_req.file_name, file_name, strlen(file_name) + 1);
+    file_data_req.offset = 0;
+    file_data_req.size = file_size;
+    
+    int bytes_read = read_full(peer_fd, file_data, file_size);
+    std::cout << "bytes read from peer : " << bytes_read << std::endl;
+
+    // save file to storage
+    fwrite_full(out_path.c_str(), file_data, file_size);
+
+    // disconnect from peer
+    disconnect_from_server(peer_fd);
+
+    // disconnect from hub
+    disconnect_from_server(hub_sockfd);
+
+    return;
+}
+
 
 // server process 3 (listens for rfc requests)
 void handle_rpc_server(struct dnode_details_struct *dnode_details) {
@@ -63,80 +183,20 @@ void handle_rpc_server(struct dnode_details_struct *dnode_details) {
         recv(newsockfd, rpc_buffer, rpc_cmd.payload_len + 1, 0);
 
         if (rpc_cmd.cmd_type == RPC_COMMAND_UPLOAD) {
-            std::cout << "RPC upload command " << std::endl;
-
-            char *in_file_path = rpc_buffer;
-            int file_len = get_file_size(in_file_path);
-            std::cout << "in_file_path : " << in_file_path << std::endl;
-            std::cout << "file size : " << file_len << std::endl;
-
-            string file_path_str(in_file_path);
-            string file_name_str = file_path_str.substr(file_path_str.find_last_of("/") + 1, file_path_str.size());
-            string out_path = string(dnode_details->files_dir) + string("/") + file_name_str;
-
-
-            uint8_t *file_buff = (uint8_t *)malloc(file_len);
-            size_t bytes_read = fread_full(in_file_path, file_buff, file_len);
-            std::cout << "bytes read :: " << bytes_read << std::endl;
-
-            // compute file hash
-            struct fhash h = compute_hash(file_buff, file_len);
-            printf("%016lx%016lx%016lx%016lx\n", h.a, h.b, h.c, h.d);
-            uint64_t file_hash = reduce_hash(&h);
-            printf("file hash : %016lx\n", file_hash);
-
-            // send the file hash to the hub
-            struct hub_cmd_struct hub_cmd;
-            hub_cmd.cmd_type = FILE_UPLOAD;
-
-            struct file_upload_req_struct file_upload_req;
-            file_upload_req.data_node_uid = dnode_details->uid;
-            file_upload_req.file_hash = file_hash;
-            file_upload_req.file_index_data_len = 0;
-            
-            // create a socket to contact hub
-            int hub_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-            if (hub_sockfd < 0) {
-                perror("Unable to create hub socket\n");
-                exit(0);
-            }
-    
-            struct sockaddr_in hub_addr;
-            hub_addr.sin_family	= AF_INET;
-            inet_aton("127.0.0.1", &hub_addr.sin_addr);
-            // hub_addr.sin_addr = dnode_details.hub_ip;
-            hub_addr.sin_port = htons(dnode_details->hub_port);
-    
-            // connect to hub
-            if (connect(hub_sockfd, (struct sockaddr *)&hub_addr, sizeof(hub_addr)) < 0) {
-                perror("Unable to connect to hub!!");
-                exit(0);
-            }
-
-            std::cout << "uploading file metadata to hub.." << std::endl;
-            send(hub_sockfd, &hub_cmd, sizeof(hub_cmd), 0);
-            send(hub_sockfd, &file_upload_req, sizeof(file_upload_req), 0);
-
-            close(hub_sockfd);
-
-            // save the file in dnode files directory
-            std::cout << "out file patth " << out_path << std::endl;
-            size_t bytes_written = fwrite_full(out_path.c_str(), file_buff, file_len);
-            std::cout << "bytes written  :: " << bytes_written << std::endl;
-            
-
+            std::cout << "\nRPC upload command " << std::endl;
+            char *file_path = rpc_buffer;
+            handle_file_upload(dnode_details, newsockfd, file_path);
 
         } else if (rpc_cmd.cmd_type == RPC_COMMAND_DOWNLOAD) {
-            std::cout << "RPC download command " << std::endl;
+            std::cout << "\nRPC download command " << std::endl;
+            char *file_name = rpc_buffer;
+            handle_file_download(dnode_details, newsockfd, file_name);
 
         } else {
             std::cout << "Invalid RPC command " << std::endl;
         }
-
-        
+ 
         close(newsockfd);
-        break;
-
     }
 
     close(sockfd);

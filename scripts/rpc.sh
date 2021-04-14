@@ -1,1 +1,0 @@
-./bin/rpc localhost:5000 -u ~/dev/p2p_dfs/samples/burn.mp3

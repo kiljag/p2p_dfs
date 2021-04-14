@@ -15,6 +15,13 @@ struct rpc_cmd_struct {
     short payload_len;
 };
 
+struct file_data_req_struct {
+    uint64_t file_hash;
+    char file_name[64];
+    int offset;
+    int size;
+};
+
 struct dnode_details_struct {
     struct in_addr hub_ip;
     short hub_port;

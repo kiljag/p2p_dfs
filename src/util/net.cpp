@@ -40,6 +40,40 @@ int create_server(int port) {
     return sockfd;
 }
 
+int stop_server(int sockfd) {
+    close(sockfd);
+}
+
+int connect_to_server(struct in_addr server_ip, short server_port) {
+
+    // create a socket to contact hub
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) {
+        perror("Unable to create hub socket\n");
+        exit(0);
+    }
+    
+    struct sockaddr_in serv_addr;
+    serv_addr.sin_family	= AF_INET;
+    inet_aton("127.0.0.1", &serv_addr.sin_addr);
+    // serv_addr.sin_addr = server_port;
+    serv_addr.sin_port = htons(server_port);
+    
+    // connect to hub
+    if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        perror("Unable to connect to hub!!");
+        exit(0);
+    }
+
+    return sockfd;
+}
+
+int disconnect_from_server(int sockfd) {
+    close(sockfd);
+}
+
+
+
 struct in_addr parse_ip_addr(char *ip_port) {
     
     std::string ip_port_str(ip_port);
@@ -61,3 +95,34 @@ short parse_port(char *ip_port) {
     return (short)(std::stoi(port_str));
 }
 
+/* read from the fd until the buff contains {size} bytes*/
+int read_full(int sockfd, void *buff, int size) {
+    
+    int offset = 0;
+    while (offset < size) {
+        int bytes_read = recv(sockfd, buff, size - offset, 0);
+        if (bytes_read < 0) {
+            return -1;
+        }
+
+        offset += bytes_read;
+    }
+
+    return offset;
+}
+
+/* write entire buff to fd */
+int write_full(int sockfd, void *buff, int size) {
+
+    int offset = 0;
+    while (offset < size) {
+        int bytes_written = send(sockfd, buff, size - offset, 0);
+        if (bytes_written < 0) {
+            return -1;
+        }
+        
+        offset += bytes_written;
+    }
+
+    return offset;
+}
