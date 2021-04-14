@@ -22,10 +22,11 @@ listens for rfc commands via rfc_port
 #include "dnode/dnode.h"
 #include "dnode/rpc_server.h"
 #include "hub/hub.h"
+#include "util/net.h"
 
 using namespace std;
 
-struct dnode_details node_details;
+struct dnode_details_struct dnode_details;
 
 
 // server process 1 (listens for hub requests)
@@ -40,6 +41,52 @@ void handle_dnode_server(int dnode_port) {
     return;
 }
 
+void handle_node_join() {
+
+    // create a socket to contact hub
+    int hub_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (hub_sockfd < 0) {
+		perror("Unable to create hub socket\n");
+		exit(0);
+	}
+    
+    struct sockaddr_in hub_addr;
+    hub_addr.sin_family	= AF_INET;
+    hub_addr.sin_addr = dnode_details.hub_ip;
+    hub_addr.sin_port = htons(dnode_details.hub_port);
+    
+    // connect to hub
+	if (connect(hub_sockfd, (struct sockaddr *)&hub_addr, sizeof(hub_addr)) < 0) {
+        perror("Unable to connect to hub!!");
+        exit(0);
+    }
+
+    struct hub_cmd_struct hub_cmd;
+    hub_cmd.cmd_type = NODE_JOIN;
+
+    struct node_join_req_struct node_join_req;
+    node_join_req.ip = dnode_details.dnode_ip;
+    node_join_req.port = dnode_details.dnode_data_port;
+    node_join_req.flags = 0;
+
+    // uint16_t command  = NODE_JOIN;
+    // memcpy(dnode_buf, &command, sizeof(command));
+    // memcpy(dnode_buf + 2, &node_join_req, sizeof(node_join_req));
+    // int payload_len = 2 + sizeof(node_join_req);
+    // send(hub_sockfd, dnode_buf, payload_len, 0);
+
+    send(hub_sockfd, &hub_cmd, sizeof(hub_cmd), 0);
+    send(hub_sockfd, &node_join_req, sizeof(node_join_req), 0);
+
+    struct node_join_res_struct node_join_res;
+    recv(hub_sockfd, &node_join_res, sizeof(node_join_res), 0);
+
+    // save uid given hub
+    dnode_details.uid = node_join_res.uid;
+
+    close(hub_sockfd);
+    return;
+}
 
 /*
 cmd : ./dnode dnode_dir hub_ip:port hub_port dnode_port rfc_port
@@ -52,66 +99,73 @@ int main(int argc, char* argv[]) {
         std::exit(1);
     }
 
-    char* dnode_dir = argv[1];
+    std::cout << "dnode dir :: " << argv[1] << std::endl;
+    std::cout << "hub ip:port :: " << argv[2] << std::endl;
+    std::cout << "hub cmd port :: " << argv[3] << std::endl;
+    std::cout << "dnode data port :: " << argv[4] << std::endl;
+    std::cout << "rpc cmd port :: " << argv[5] << std::endl; 
 
-    string hub_ip_port(argv[2]);
-    int del_pos = hub_ip_port.find(":");
-    string hub_ip_str = hub_ip_port.substr(0, del_pos);
-    string hub_port_str = hub_ip_port.substr(del_pos+1, hub_ip_port.size());
 
-    inet_aton("localhost", &(node_details.dnode_ip));
-    inet_aton(hub_ip_str.c_str(), &(node_details.hub_ip));
-    node_details.hub_port = stoi(hub_port_str);
+    string dnode_root_dir = string(argv[1]);
+    string dnode_files_dir = dnode_root_dir + string("/files");
+    string dnode_meta_dir = dnode_root_dir + string("/meta");
 
-    node_details.hub_cmd_port = atoi(argv[3]);
-    node_details.dnode_data_port = atoi(argv[4]);
-    node_details.rpc_port = atoi(argv[5]);
+    std::cout << "dnode_root_dir  :: " << dnode_root_dir << std::endl;
+    std::cout << "dnode_files_dir :: " << dnode_files_dir << std::endl;
+    std::cout << "dnode_meta_dir  :: " << dnode_meta_dir << std::endl;
 
-    string root_dir(dnode_dir);
-    string files_dir = dnode_dir + string("/files");
-
-    // fill up node details
-    node_details.uid = (uint64_t)rand();
-    node_details.root_dir = (char *)calloc(root_dir.size()+1, sizeof(char));
-    node_details.files_dir = (char *)calloc(files_dir.size() + 1, sizeof(char));
-
-    memcpy(node_details.root_dir, root_dir.c_str(), root_dir.size());
-    memcpy(node_details.files_dir, files_dir.c_str(), files_dir.size());
-
-    std::cout << "root dir : " << node_details.root_dir << endl;
-    std::cout << "files dir : " << node_details.files_dir << endl;
-
-    char dnode_buf[2048];
-
-    // send a join request to hub
-    int hub_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (hub_sockfd < 0) {
-		perror("Unable to create socket\n");
-		exit(0);
-	}
+    // store hub details
+    dnode_details.hub_ip = parse_ip_addr(argv[2]);
+    dnode_details.hub_port = parse_port(argv[2]);
     
-    struct sockaddr_in hub_addr;
-    hub_addr.sin_family	= AF_INET;
-    hub_addr.sin_addr = node_details.hub_ip;
-    hub_addr.sin_port = htons((short)node_details.hub_port);
+    /*todo : should fill this properly*/
+    inet_aton("localhost", &(dnode_details.dnode_ip));
+
+    // store port details
+    dnode_details.hub_cmd_port = (short)atoi(argv[3]);
+    dnode_details.dnode_data_port = (short)atoi(argv[4]);
+    dnode_details.rpc_port = (short)atoi(argv[5]);
+
+    // store folders
+    memcpy(dnode_details.root_dir, dnode_root_dir.c_str(), dnode_root_dir.size()+1);
+    memcpy(dnode_details.files_dir, dnode_files_dir.c_str(), dnode_files_dir.size() + 1);
+    memcpy(dnode_details.meta_dir, dnode_meta_dir.c_str(), dnode_meta_dir.size() + 1);
+
+    // in case the node is joining for first time
+    // handle_node_join();
+    // std::cout << "dnode uid :: " << dnode_details.uid << std::endl; 
     
-	if (connect(hub_sockfd, (struct sockaddr *)&hub_addr, sizeof(hub_addr)) < 0) {
-        perror("Unable to connect to hub!!");
-        exit(0);
-    }
+    // char dnode_buf[2048];
 
-    struct node_join_struct node_join_details;
-    node_join_details.uid = node_details.uid;
-    node_join_details.ip = node_details.dnode_ip;
-    node_join_details.port = node_details.dnode_data_port;
-    node_join_details.flags = 0;
+    // // send a join request to hub
+    // int hub_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    // if (hub_sockfd < 0) {
+	// 	perror("Unable to create socket\n");
+	// 	exit(0);
+	// }
+    
+    // struct sockaddr_in hub_addr;
+    // hub_addr.sin_family	= AF_INET;
+    // hub_addr.sin_addr = node_details.hub_ip;
+    // hub_addr.sin_port = htons((short)node_details.hub_port);
+    
+	// if (connect(hub_sockfd, (struct sockaddr *)&hub_addr, sizeof(hub_addr)) < 0) {
+    //     perror("Unable to connect to hub!!");
+    //     exit(0);
+    // }
 
-    uint16_t command  = NODE_JOIN;
-    memcpy(dnode_buf, &command, sizeof(command));
-    memcpy(dnode_buf + 2, &node_join_details, sizeof(node_join_details));
-    int payload_len = 2 + sizeof(node_join_details);
-    send(hub_sockfd, dnode_buf, payload_len, 0);
-    close(hub_sockfd);
+    // struct node_join_req_struct node_join_req;
+    // node_join_req.uid = node_details.uid;
+    // node_join_req.ip = node_details.dnode_ip;
+    // node_join_req.port = node_details.dnode_data_port;
+    // node_join_req.flags = 0;
+
+    // uint16_t command  = NODE_JOIN;
+    // memcpy(dnode_buf, &command, sizeof(command));
+    // memcpy(dnode_buf + 2, &node_join_req, sizeof(node_join_req));
+    // int payload_len = 2 + sizeof(node_join_req);
+    // send(hub_sockfd, dnode_buf, payload_len, 0);
+    // close(hub_sockfd);
 
     
     
@@ -126,7 +180,7 @@ int main(int argc, char* argv[]) {
 
     pid_t rpc_server_pid = fork();
     if (rpc_server_pid == 0) {
-        handle_rpc_server(&node_details);
+        handle_rpc_server(&dnode_details);
     }
 
     int wstatus;

@@ -12,45 +12,55 @@
 #define FILE_UPLOAD 0x0003
 #define FILE_DOWNLOAD 0x0004
 
+struct hub_cmd_struct {
+    uint16_t cmd_type;
+};
 
 // hub only data structures
 
 struct dnode_struct{
     uint64_t uid;
     struct in_addr ip;
-    int port;
-    int flags;
+    short port;
+    uint16_t flags;
 };
 
+// public data structures (hub and peer dnodes)
 
-// public data structures
-
-struct dnode_compact_struct {
+struct peer_dnode_struct {
     struct in_addr ip;
-    int port;
-    int flags;
+    short port;
+    short flags;
 };
 
-struct node_join_struct {
+struct node_join_req_struct {
+    struct in_addr ip;
+    short port;
+    uint16_t flags;
+};
+
+struct node_join_res_struct {
     uint64_t uid;
-    struct in_addr ip;
-    int port;
-    int flags;
 };
 
-struct file_upload_struct {
+struct file_upload_req_struct {
     uint64_t data_node_uid;
+    uint64_t file_hash;
+    int file_index_data_len;
+};
+
+struct file_download_res_struct {
     uint64_t file_hash;
 };
 
-struct file_download_struct {
-    uint64_t data_node_uid;
-    uint64_t file_hash;
-};
+// struct file_download_req_struct {
+//     char file_name[64];
+// };
 
-struct file_download_response_struct {
-    int numdnodes;
-    dnode_compact_struct *dnodes;
-};
+// struct file_download_res_struct {
+//     uint64_t  file_hash;
+//     int file_index_data_len;
+//     int numdnodes;
+// };
 
 #endif

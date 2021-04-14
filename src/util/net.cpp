@@ -1,4 +1,6 @@
 
+#include <string>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -37,3 +39,25 @@ int create_server(int port) {
 
     return sockfd;
 }
+
+struct in_addr parse_ip_addr(char *ip_port) {
+    
+    std::string ip_port_str(ip_port);
+    int del_pos = ip_port_str.find(":");
+    std::string ip_addr_str = ip_port_str.substr(0, del_pos);
+
+    struct in_addr ip_addr;
+    inet_aton(ip_addr_str.c_str(), &ip_addr);
+    
+    return ip_addr;
+}
+
+short parse_port(char *ip_port) {
+
+    std::string ip_port_str(ip_port);
+    int del_pos = ip_port_str.find(":");
+    std::string port_str = ip_port_str.substr(del_pos+1, ip_port_str.size());
+
+    return (short)(std::stoi(port_str));
+}
+

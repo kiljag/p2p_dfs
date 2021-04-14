@@ -23,18 +23,20 @@
 
 
 // server process 3 (listens for rfc requests)
-void handle_rpc_server(struct dnode_details *node_details) {
+void handle_rpc_server(struct dnode_details_struct *dnode_details) {
 
 
     std::cout << "RPC server :: Starting!!" << std::endl;
-    char* rfc_buffer = (char *)malloc(2048); // 2MB all-purpose buffer
-    int rpc_port = node_details->rpc_port;
+    char* rpc_buffer = (char *)malloc(2048); // 2MB all-purpose buffer
+    int rpc_port = dnode_details->rpc_port;
     int sockfd = create_server(rpc_port);
+
     if(sockfd < 0) {
         std::cout << "RPC server :: Unable to create server with port " << rpc_port << std::endl;
         std::cout << "RPC server :: Terminating.. " << std::endl;
         exit(EXIT_FAILURE);
     }
+
     std::cout << "RPC server :: server created!!" << std::endl;
 
     if (listen(sockfd, 5) == 0) {
@@ -52,26 +54,37 @@ void handle_rpc_server(struct dnode_details *node_details) {
             std::exit(0);
         }
 
-        std::cout << "RPC server :: Handling RPC request" << std::endl;
-        recv(newsockfd, rfc_buffer, 2048, 0);
+        std::cout << "RPC server :: new request" << std::endl;
 
-        if(rfc_buffer[0] == RPC_COMMAND_UPLOAD) {
-            printf("command upload\n");
-        } else if (rfc_buffer[0] == RPC_COMMAND_DOWNLOAD) {
-            printf("command download\n");
+        struct rpc_cmd_struct rpc_cmd;
+        recv(newsockfd, &rpc_cmd, sizeof(rpc_cmd), 0);
+        recv(newsockfd, rpc_buffer, rpc_cmd.payload_len + 1, 0);
+
+        if (rpc_cmd.cmd_type == RPC_COMMAND_UPLOAD) {
+            std::cout << "RPC upload command " << std::endl;
+
+        } else if (rpc_cmd.cmd_type == RPC_COMMAND_DOWNLOAD) {
+            std::cout << "RPC download command " << std::endl;
+
+        } else {
+            std::cout << "Invalid RPC command " << std::endl;
         }
 
+        close(newsockfd);
+        break;
+
+        
         int file_path_len;
-        memcpy(&file_path_len, rfc_buffer+1, 4);
+        memcpy(&file_path_len, rpc_buffer+1, 4);
         std::cout << "payload len" << file_path_len << endl;
 
-        string file_path(rfc_buffer + 5, rfc_buffer + 5 + file_path_len);
+        string file_path(rpc_buffer + 5, rpc_buffer + 5 + file_path_len);
         string file_name = file_path.substr(file_path.find_last_of("/") + 1, file_path.size());
 
         std::cout << "file path : " << file_path << endl;
         std::cout << "file name : " << file_name << endl;
 
-        if (rfc_buffer[0] == RPC_COMMAND_UPLOAD) {
+        if (rpc_buffer[0] == RPC_COMMAND_UPLOAD) {
             // finding hash of the file.
 
             // int read_fd = open(file_path.c_str(), O_RDONLY);
@@ -104,21 +117,21 @@ void handle_rpc_server(struct dnode_details *node_details) {
             printf("file hash : %016lx\n", file_hash);
 
             
-            string out_path = string(node_details->files_dir) + string("/") + file_name;
+            string out_path = string(dnode_details->files_dir) + string("/") + file_name;
             std::cout << "out_path : " << out_path << endl;
             FILE *fw  = fopen(out_path.c_str(), "wb");
             fwrite(d, 1, fsz+1, fw);
             // ifstream infile;
             // infile.open(file_path, ios::binary | ios::in);
-
-
-            
-
+        }
+        else if (RPC_COMMAND_DOWNLOAD) {
+            // file_hash
+            // peer_dnode ipaddrerss
         }
 
         close(newsockfd);
         break;
     }
-
+    close(sockfd);
     std::exit(EXIT_SUCCESS);
 }

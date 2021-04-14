@@ -1,10 +1,10 @@
-all: build-rpc build-dnode build-hub
+all: rpc dnode hub
 
-build-rpc:
+rpc:
 	g++ src/rpc.cpp `find src/util src/dnode src/hub -name "*.cpp"` -o bin/rpc
 
-build-dnode:
+dnode:
 	g++ src/dnode.cpp `find src/util src/dnode src/hub -name "*.cpp"` -o bin/dnode
 
-build-hub:
+hub:
 	g++ src/hub.cpp `find src/util src/dnode src/hub -name "*.cpp"` -o bin/hub

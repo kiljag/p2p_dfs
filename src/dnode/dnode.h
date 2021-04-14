@@ -6,21 +6,26 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#define RPC_COMMAND_UPLOAD 0x01
-#define RPC_COMMAND_DOWNLOAD 0x02
-#define RPC_COMMAND_KILL 0x03
+#define RPC_COMMAND_UPLOAD 0x0001
+#define RPC_COMMAND_DOWNLOAD 0x0002
+#define RPC_COMMAND_KILL 0x0003
 
+struct rpc_cmd_struct {
+    uint16_t cmd_type;
+    short payload_len;
+};
 
-struct dnode_details {
+struct dnode_details_struct {
     struct in_addr hub_ip;
-    int hub_port;
+    short hub_port;
     struct in_addr dnode_ip;
-    int hub_cmd_port;
-    int dnode_data_port;
-    int rpc_port;
+    short hub_cmd_port;
+    short dnode_data_port;
+    short rpc_port;
     uint64_t uid;
-    char* root_dir;
-    char* files_dir;
+    char root_dir[128];
+    char files_dir[128];
+    char meta_dir[128];
 };
 
 #endif
