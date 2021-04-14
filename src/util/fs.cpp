@@ -14,11 +14,12 @@ size_t get_file_size(char *file_path) {
     return st.st_size;
 }
 
-size_t fread_full(char *file_path, uint8_t *buff, size_t size) {
+/*to do : error checking*/
+size_t fread_full(const char *file_path, uint8_t *buff, size_t size) {
 
     int fd = open(file_path, O_RDONLY);
     if (fd < 0) {
-        perror("unable to open file.\n");
+        perror("unable to open file (read only mode).\n");
         return -1;
     }
 
@@ -31,4 +32,20 @@ size_t fread_full(char *file_path, uint8_t *buff, size_t size) {
     return offset;
 }
 
-size_t fwrite_full(char *file_path, uint8_t *buf, size_t size);
+/*to do : error checking*/
+size_t fwrite_full(const char *file_path, uint8_t *buff, size_t size) {
+
+    int fd = open(file_path, O_CREAT | O_WRONLY, 0644);
+    if (fd < 0) {
+        perror("unable to open file (write only mode).\n");
+        return -1;
+    }
+
+    size_t offset = 0;
+    while(offset < size) {
+        int bytes_written  = write(fd, buff + offset, size - offset);
+        offset += bytes_written;
+    }
+
+    return offset;
+}

@@ -52,7 +52,8 @@ void handle_node_join() {
     
     struct sockaddr_in hub_addr;
     hub_addr.sin_family	= AF_INET;
-    hub_addr.sin_addr = dnode_details.hub_ip;
+    inet_aton("127.0.0.1", &hub_addr.sin_addr);
+    // hub_addr.sin_addr = dnode_details.hub_ip;
     hub_addr.sin_port = htons(dnode_details.hub_port);
     
     // connect to hub
@@ -132,8 +133,8 @@ int main(int argc, char* argv[]) {
     memcpy(dnode_details.meta_dir, dnode_meta_dir.c_str(), dnode_meta_dir.size() + 1);
 
     // in case the node is joining for first time
-    // handle_node_join();
-    // std::cout << "dnode uid :: " << dnode_details.uid << std::endl; 
+    handle_node_join();
+    std::cout << "dnode uid :: " << dnode_details.uid << std::endl; 
     
     // char dnode_buf[2048];
 

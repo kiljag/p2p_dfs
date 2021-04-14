@@ -46,10 +46,11 @@ int main(int argc, char* argv[]) {
 
     // fill dnode server details
     serv_addr.sin_family = AF_INET;
-    memcpy(&serv_addr.sin_addr, &dnode_ip_addr, sizeof(dnode_ip_addr));
+    inet_aton("127.0.0.1", &serv_addr.sin_addr);
+    // memcpy(&serv_addr.sin_addr, &dnode_ip_addr, sizeof(dnode_ip_addr));
     serv_addr.sin_port = htons(dnode_port);
 
-
+    std::cout << "connecting to dnode.. " << std::endl;
     if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
         perror("unable to connect to server..\n");
         exit(0);

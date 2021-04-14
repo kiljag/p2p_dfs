@@ -27,17 +27,17 @@ map<uint64_t, vector<uint64_t>> fhash_map;
 // to store dnode_details
 vector<struct dnode_struct *> dnode_list;
 
-// void add_dnode_details(struct node_join_req_struct *node_join_req) {
+void add_dnode_details(uint64_t uid, struct node_join_req_struct *node_join_req) {
 
-//     struct dnode_struct *dnode_details = (struct dnode_struct *)malloc(sizeof(struct dnode_struct));
+    struct dnode_struct *dnode_details = (struct dnode_struct *)malloc(sizeof(struct dnode_struct));
     
-//     dnode_details->uid = node_join_req->uid;
-//     dnode_details->ip = node_join_req->ip;
-//     dnode_details->port = node_join_req->port;
-//     dnode_details->flags = 0;
+    dnode_details->uid = uid;
+    dnode_details->ip = node_join_req->ip;
+    dnode_details->port = node_join_req->port;
+    dnode_details->flags = 0;
 
-//     dnode_list.push_back(dnode_details);
-// }
+    dnode_list.push_back(dnode_details);
+}
 
 /*
 ./hub root_dir hub_port
@@ -74,19 +74,27 @@ int main(int argc, char** argv) {
         }
 
         std::cout << "Hub :: Handling request" << std::endl;
-        recv(newsockfd, buffer, 2048, 0);
-        uint16_t command;
-        memcpy(&command, buffer, sizeof(command));
+        // recv(newsockfd, buffer, 2048, 0);
+        // uint16_t command;
+        // memcpy(&command, buffer, sizeof(command));
+        struct hub_cmd_struct hub_cmd;
+        recv(newsockfd, &hub_cmd, sizeof(hub_cmd), 0);
 
-        // if(command == NODE_JOIN) {
+        if(hub_cmd.cmd_type == NODE_JOIN) {
 
-        //     std::cout << "Hub :: Node join" << std::endl;
-        //     struct node_join_req_struct node_join_req;
-        //     memcpy(&node_join_req, buffer+2, sizeof(node_join_req));
-        //     add_dnode_details(&node_join_req);
-        //     printf("new node joined : uid : %08x\n", node_join_req.uid);
+            std::cout << "Hub :: Node join" << std::endl;
+            struct node_join_req_struct node_join_req;
+            recv(newsockfd, &node_join_req, sizeof(node_join_req), 0);
 
-        // } else if (command == FILE_UPLOAD) {
+            uint16_t ruid = (uint64_t)rand();
+            add_dnode_details(ruid, &node_join_req);
+            printf("new node joined : uid : %08x\n", ruid);
+
+            struct node_join_res_struct node_join_res;
+            node_join_res.uid = ruid;
+            send(newsockfd, &node_join_res, sizeof(node_join_res), 0);
+        } 
+        // else if (command == FILE_UPLOAD) {
             
         //     std::cout << "Hub :: File upload" << std::endl;
         //     struct file_upload_struct file_upload_details;
@@ -107,9 +115,11 @@ int main(int argc, char** argv) {
 
         // }
 
-
+        close(newsockfd);
 
     }
+
+    close(sockfd);
     
     return 0;
 }
