@@ -6,15 +6,26 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#define RPC_COMMAND_UPLOAD 0x0001
-#define RPC_COMMAND_DOWNLOAD 0x0002
-#define RPC_COMMAND_KILL 0x0003
+#define RPC_REQ_UPLOAD 0x0001
+#define RPC_REQ_DOWNLOAD 0x0002
+#define RPC_REQ_KILL 0x0003
 
-struct rpc_cmd_struct {
-    uint16_t cmd_type;
+#define RPC_RES_SUCCEES 0x0101
+#define RPC_RES_FAILURE 0x0102
+
+// RPC rerquest and response
+
+struct rpc_req_struct {
+    uint16_t req_type;
     short payload_len;
 };
 
+struct rpc_res_struct {
+    uint16_t res_type;
+    short payload_len;
+};
+
+// Data server, File request
 struct file_data_req_struct {
     uint64_t file_hash;
     char file_name[64];

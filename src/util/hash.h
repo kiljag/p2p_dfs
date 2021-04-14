@@ -14,10 +14,14 @@ struct fhash {
     uint64_t d;
 };
 
-struct fhash compute_hash(void * data, size_t l);
+uint64_t compute_hash(void * data, size_t l);
+
+uint64_t random64bit();
 
 uint64_t reduce_hash(struct fhash *h1);
 
 int compare_hashes(struct fhash *hash1, struct fhash *hash2);
+
+
 
 #endif

@@ -7,7 +7,7 @@
 #include <sys/types.h>
 
 /* utility functions to create and stop a server*/
-int create_server(int port);
+int create_server(short port);
 int stop_server(int sockfd);
 
 /* functions to connect to and disconnect from a server */
@@ -22,5 +22,7 @@ short parse_port(char *ip_port);
 int read_full(int sockfd, void *buff, int size);
 int write_full(int sockfd, void *buff, int size); 
 
+int recv_full(int sockfd, void *buff, int size);
+int send_full(int sockfd, void *buff, int size);
 
 #endif

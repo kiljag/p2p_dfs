@@ -17,6 +17,7 @@
 
 #include "hub/hub.h"
 #include "util/net.h"
+#include "util/hash.h"
 
 
 using namespace std;
@@ -24,24 +25,36 @@ using namespace std;
 // filehash, list_of_dnode_uids mapping
 map<uint64_t, vector<uint64_t>> fhash_map;
 
+// to store file_meta_details (file_hash, file_metdata)
+map<uint64_t, struct file_metadata_struct *> file_metadata_map; 
+
+// to store file_index_data (file_hash, file_indexdata)
+map<uint64_t, uint8_t *> file_indexdata_map;
+
 // filename, filehash mapping
 map<string, uint64_t> fname_map;
 
 // to store dnode_details
-map<uint16_t, struct dnode_struct *> dnodes_map;
+map<uint64_t, struct dnode_struct *> dnodes_map;
 
 
-void handle_new_node_join(int dnode_sockfd, struct node_join_req_struct *node_join_req) {
+
+
+void handle_new_node_join(int dnode_sockfd) {
+
+    // get node join request from dnode
+    struct node_join_req_struct node_join_req;
+    recv_full(dnode_sockfd, &node_join_req, sizeof(node_join_req));
 
     // generate random id for the dnode
-    uint64_t dnode_id = ((uint64_t)rand() << 32) ^ (uint64_t)(rand());
-    printf("new node joined : uid : %08lx\n", dnode_id);
+    uint64_t dnode_id = random64bit();
+    printf("new node joined : uid :9533 %08lx\n", dnode_id);
 
     // fill up dnode details
     struct dnode_struct *dnode_details = (struct dnode_struct *)malloc(sizeof(struct dnode_struct));
     dnode_details->uid = dnode_id;
-    dnode_details->ip = node_join_req->ip;
-    dnode_details->port = node_join_req->port;
+    dnode_details->ip = node_join_req.ip;
+    dnode_details->port = node_join_req.port;
     dnode_details->flags = 0; /*TODO :*/
 
     // save dnode in memory
@@ -55,33 +68,59 @@ void handle_new_node_join(int dnode_sockfd, struct node_join_req_struct *node_jo
     return;
 }
 
-void handle_file_upload_req(int dnode_fd, struct file_upload_req_struct * file_upload_req) {
+void handle_file_upload_req(int dnode_sockfd) {
     
-    // parse file upload request
-    uint64_t dnode_id  = file_upload_req->data_node_uid;
-    uint64_t fhash = file_upload_req->file_hash;
-    string fname = string(file_upload_req->file_name);
+    // char file_index_data[4096]; // 4MB will suffice for this project
 
-    // if the fhash entry is absent
-    if (fhash_map.find(fhash) == fhash_map.end()) {
-        fhash_map[fhash] = vector<uint64_t>();
+    // get file upload request
+    struct file_upload_req_struct file_upload_req;
+    recv_full(dnode_sockfd, &file_upload_req, sizeof(file_upload_req));
+
+    // parse file upload request
+    uint64_t dnode_id  = file_upload_req.dnode_uid;
+    uint64_t file_hash = file_upload_req.file_hash;
+    int file_size = file_upload_req.file_size;
+    string file_name = string(file_upload_req.file_name);
+    int num_chunks = file_upload_req.num_chunks;
+    int file_index_data_size = file_upload_req.file_index_data_size;
+    
+    // store the file details in file_metadata_map
+    struct file_metadata_struct *metadata = (file_metadata_struct *)malloc(sizeof(file_metadata_struct));
+    metadata->file_hash = file_hash;
+    metadata->file_size = file_size;
+    metadata->num_chunks = num_chunks;
+
+    file_metadata_map[file_hash] = metadata;
+
+    // if the file_hash entry is absent in fhashmap
+    if (fhash_map.find(file_hash) == fhash_map.end()) {
+        fhash_map[file_hash] = vector<uint64_t>();
     }
-    fhash_map[fhash].push_back(dnode_id);
+    fhash_map[file_hash].push_back(dnode_id);
             
     // add the fname entry
-    if (fname_map.find(fname) == fname_map.end()) {
-        fname_map[fname] = fhash;
-    } 
+    if (fname_map.find(file_name) == fname_map.end()) {
+        fname_map[file_name] = file_hash;
+    }
+
+    // recv file_index_data;
+    uint8_t *file_index_data = (uint8_t *)malloc(file_index_data_size);
+    recv_full(dnode_sockfd, file_index_data, file_index_data_size);
+    file_indexdata_map[file_hash] = file_index_data;
 
     /*TODO: should send something back to dnode*/
 
     return;
 }
 
-void handle_file_download_req(int dnode_sockfd, struct file_download_req_struct * file_download_req) {
+void handle_file_download_req(int dnode_sockfd) {
+
+    // get file download request
+    struct file_download_req_struct file_download_req;
+    recv_full(dnode_sockfd, &file_download_req, sizeof(file_download_req));
 
     // parse file download request
-    string fname =  string(file_download_req->file_name);
+    string fname =  string(file_download_req.file_name);
     uint64_t fhash =  fname_map[fname];
 
     // intialize file_index_data // todo
@@ -104,7 +143,8 @@ void handle_file_download_req(int dnode_sockfd, struct file_download_req_struct 
 
     // fill file download response
     struct file_download_res_struct file_download_res;
-    file_download_res.file_hash = fhash;        
+    file_download_res.file_hash = fhash;
+    file_download_res.file_size = file_metadata_map[fhash]->file_size;   
     file_download_res.num_peer_dnodes = num_peer_nodes;
     file_download_res.file_index_data_len = 0;
 
@@ -151,39 +191,29 @@ int main(int argc, char** argv) {
             std::exit(0);
         }
 
-        std::cout << "Hub :: Handling request" << std::endl;
-        // recv(newsockfd, buffer, 2048, 0);
-        // uint16_t command;
-        // memcpy(&command, buffer, sizeof(command));
+        std::cout << "\nHub :: Handling request" << std::endl;
         struct hub_cmd_struct hub_cmd;
-        recv(newsockfd, &hub_cmd, sizeof(hub_cmd), 0);
+        recv_full(newsockfd, &hub_cmd, sizeof(hub_cmd));
 
         if(hub_cmd.cmd_type == NODE_JOIN) {
+            std::cout << "Hub :: Node join request" << std::endl;
+            handle_new_node_join(newsockfd);
 
-            std::cout << "Hub :: Node join" << std::endl;
-            struct node_join_req_struct node_join_req;
-            recv(newsockfd, &node_join_req, sizeof(node_join_req), 0);
-
-            handle_new_node_join(newsockfd, &node_join_req);
         } 
-
         else if (hub_cmd.cmd_type == FILE_UPLOAD) {
-            
-            std::cout << "Hub :: File upload" << std::endl;
-            struct file_upload_req_struct file_upload_req;
-            recv(newsockfd, &file_upload_req, sizeof(file_upload_req), 0);
-            
-            handle_file_upload_req(newsockfd, &file_upload_req);
-        }
+            std::cout << "Hub :: File upload request" << std::endl;
+            handle_file_upload_req(newsockfd);
 
+        }
         else if (hub_cmd.cmd_type == FILE_DOWNLOAD) {
-
             std::cout << "Hub :: File download request" << std::endl;
-            struct file_download_req_struct file_download_req;
-            recv(newsockfd, &file_download_req, sizeof(file_download_req), 0);
-
-            handle_file_download_req(newsockfd, &file_download_req);
+            handle_file_download_req(newsockfd);
         }
+
+        else {
+            std::cout << "Invalid request" << hub_cmd.cmd_type << std::endl;
+        }
+        
 
         close(newsockfd);
 

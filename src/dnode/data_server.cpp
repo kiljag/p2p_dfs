@@ -56,18 +56,22 @@ void handle_data_server(struct dnode_details_struct *dnode_details) {
             std::exit(0);
         }
 
+        std::cout << "\nData server :: Handling request " << std::endl;
+
         struct file_data_req_struct file_data_req;
-        read_full(newsockfd, &file_data_req, sizeof(file_data_req));
+        recv_full(newsockfd, &file_data_req, sizeof(file_data_req));
 
         string files_dir = string(dnode_details->files_dir); 
         string file_path = files_dir + string("/") + string(file_data_req.file_name);
 
         /*for now assume, the request is for entire file*/
-        int file_size = file_data_req.size - file_data_req.offset;
-        uint8_t *file_data = (uint8_t *)malloc(file_size);
-        fread_full(file_path.c_str(), file_data, file_size);
+        // int file_size = file_data_req.size - file_data_req.offset;
+        // uint8_t *file_data = (uint8_t *)malloc(file_size);
+        // int bytes_read = fread_full(file_path.c_str(), file_data, file_size);
+        // std::cout << "Data server :: bytes read (from fs) : " << bytes_read << std::endl;
 
-        write_full(newsockfd, file_data, file_size);
+        // int bytes_sent = send_full(newsockfd, file_data, file_size);
+        // std::cout << "Data server :: bytes sent (via net) : " << bytes_sent << std::endl;
 
         close(newsockfd);
     }

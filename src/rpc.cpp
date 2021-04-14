@@ -36,49 +36,73 @@ int main(int argc, char* argv[]) {
     short dnode_port = parse_port(argv[1]);
 
 
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0){
-        perror("failed to create socket\n");
-        exit(0);
-    }
+    // int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    // if (sockfd < 0){
+    //     perror("failed to create socket\n");
+    //     exit(0);
+    // }
 
-    struct sockaddr_in serv_addr;
+    // struct sockaddr_in serv_addr;
 
-    // fill dnode server details
-    serv_addr.sin_family = AF_INET;
-    inet_aton("127.0.0.1", &serv_addr.sin_addr);
-    // memcpy(&serv_addr.sin_addr, &dnode_ip_addr, sizeof(dnode_ip_addr));
-    serv_addr.sin_port = htons(dnode_port);
+    // // fill dnode server details
+    // serv_addr.sin_family = AF_INET;
+    // inet_aton("127.0.0.1", &serv_addr.sin_addr);
+    // // memcpy(&serv_addr.sin_addr, &dnode_ip_addr, sizeof(dnode_ip_addr));
+    // serv_addr.sin_port = htons(dnode_port);
 
-    std::cout << "connecting to dnode.. " << std::endl;
-    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        perror("unable to connect to server..\n");
-        exit(0);
-    }
-    std::cout << "connected to dnode " << std::endl;
+    
+
+    
+    // if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+    //     perror("unable to connect to server..\n");
+    //     exit(0);
+    // }
+
+    std::cout << "RPC :: connecting to dnode.. " << std::endl;
+    int dnode_sockfd = connect_to_server(dnode_ip_addr, dnode_port);
+    std::cout << "RPC :: connected to dnode.." << std::endl;
 
     char buffer[1024];
-    struct rpc_cmd_struct rpc_cmd;
-    
-    
+    struct rpc_req_struct rpc_req;
+    char* payload = argv[3];
+    int payload_len = strlen(payload) + 1; //to include null byte
+
     if (string(argv[2]) == "-u") {
-        rpc_cmd.cmd_type = RPC_COMMAND_UPLOAD;
-        rpc_cmd.payload_len = strlen(argv[3]);
+        rpc_req.req_type = RPC_REQ_UPLOAD;
+        rpc_req.payload_len = payload_len;
 
     } else if (string(argv[2]) == "-d") {
-        rpc_cmd.cmd_type = RPC_COMMAND_DOWNLOAD;
-        rpc_cmd.payload_len = strlen(argv[3]);
+        rpc_req.req_type = RPC_REQ_DOWNLOAD;
+        rpc_req.payload_len = payload_len;
 
     } else {
         printf("Invalid command, %s\n", argv[2]);
         exit(0);
     }
-    
-    memcpy(buffer, argv[3], rpc_cmd.payload_len);
 
-    std::cout << "sending rpc request " << std::endl;
-    send(sockfd, &rpc_cmd, sizeof(rpc_cmd), 0);
-    send(sockfd, buffer, rpc_cmd.payload_len + 1, 0);
+
+    std::cout << "RPC :: sending rpc request " << std::endl;
+    send_full(dnode_sockfd, &rpc_req, sizeof(rpc_req));
+
+    std::cout << "RPC :: sending payload " << std::endl;
+    send_full(dnode_sockfd, payload, payload_len);
+
+    // read response from the dnode server
+    struct rpc_res_struct rpc_res;
+    recv_full(dnode_sockfd, &rpc_res, sizeof(rpc_res));
+
+    if (rpc_res.res_type == RPC_RES_SUCCEES) {
+        std::cout << "RPC :: op success !!" << std::endl;
+
+    } else if (rpc_res.res_type == RPC_RES_FAILURE) {
+        std::cout << "RPC :: op failure !!" << std::endl;
     
+    } else {
+        std::cout << "Invalid response type" << std::endl;
+    }
+
+    //close connection
+    disconnect_from_server(dnode_sockfd);
+
     return 0;
 }

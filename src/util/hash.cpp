@@ -6,7 +6,8 @@ To do, we should be able to compute hash on data with any size, not just a multi
 of 64 bits (need to padd the data)
 */
 
-struct fhash compute_hash(void * data, size_t l)
+// computes 64 bit hash
+uint64_t compute_hash(void * data, size_t l)
 {
   uint32_t i;
   struct fhash hstrct = {0};
@@ -24,13 +25,22 @@ struct fhash compute_hash(void * data, size_t l)
     hstrct.d = (hstrct.d ^ d[i]) * fnv_prime;
   }
 
-  return hstrct;
+  // return hstrct;
+  return (hstrct.a) ^ (hstrct.b) ^ (hstrct.c) ^ (hstrct.d);
 }
 
+uint64_t random64bit() {
+
+  uint64_t lhalf = (uint64_t)rand() << 32;
+  uint64_t rhalf = (uint64_t)(rand());
+
+  return lhalf ^ rhalf;
+}
 
 uint64_t reduce_hash(struct fhash * h1) {
     return (h1->a) ^ (h1->b) ^ (h1->c) ^ (h1->d);
 }
+
 
 int compare_hashes(struct fhash *h1, struct fhash *h2) {
     return (h1->a == h2->a) && (h1->b && h2->b) && (h1->c && h2->c) && (h1->d && h1->d); 

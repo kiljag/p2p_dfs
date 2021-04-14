@@ -1,4 +1,4 @@
-
+#include <iostream>
 #include <string>
 
 #include <stdio.h>
@@ -14,7 +14,9 @@
 
 #include "net.h"
 
-int create_server(int port) {
+using namespace std;
+
+int create_server(short port) {
 
     int sockfd;
     struct sockaddr_in servaddr;
@@ -33,7 +35,8 @@ int create_server(int port) {
 
     //bind to port
     if(bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) != 0) {
-        printf("failed to bind to server port");
+        // printf("failed to bind to server port %d");
+        std::cout << "failed to bind to port " << port << std::endl;
         std::exit(EXIT_FAILURE);
     }
 
@@ -125,4 +128,39 @@ int write_full(int sockfd, void *buff, int size) {
     }
 
     return offset;
+}
+
+int recv_full(int sockfd, void *buff, int size) {
+
+    int offset = 0;
+    while (offset < size) {
+        int bytes_recv = recv(sockfd, buff, size - offset, 0);
+        std::cout << "bytes recv : " << bytes_recv << std::endl;
+        if (bytes_recv < 0) {
+            perror("peer node failed\n");
+            return -1;
+        }
+
+        offset += bytes_recv;
+    }
+
+    return offset;
+}
+
+int send_full(int sockfd, void *buff, int size) {
+
+    int offset = 0;
+    while (offset < size) {
+        int bytes_sent = send(sockfd, buff, size - offset, 0);
+        std::cout << "bytes sent : " << bytes_sent << std::endl;
+        if (bytes_sent < 0) {
+            perror("peer node failed\n");
+            return -1;
+        }
+        
+        offset += bytes_sent;
+    }
+
+    return offset;
+
 }
