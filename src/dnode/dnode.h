@@ -13,6 +13,9 @@
 #define RPC_RES_SUCCEES 0x0101
 #define RPC_RES_FAILURE 0x0102
 
+#define DATA_TRANSFER_SUCCESS 0x00010001
+#define DATA_TRANSFER_FAILURE 0X00010001
+
 // RPC rerquest and response
 
 struct rpc_req_struct {
@@ -31,6 +34,11 @@ struct file_data_req_struct {
     char file_name[64];
     int offset;
     int size;
+};
+
+struct file_data_res_struct {
+    uint64_t res_type;
+    int payload_len;
 };
 
 struct dnode_details_struct {

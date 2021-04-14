@@ -50,30 +50,52 @@ void handle_data_server(struct dnode_details_struct *dnode_details) {
 
     while(1) {
         
-        int newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
-        if (newsockfd < 0) {
+        int peer_sockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
+        if (peer_sockfd < 0) {
             perror("Accept error\n");
             std::exit(0);
         }
 
-        std::cout << "\nData server :: Handling request " << std::endl;
+        std::cout << "\nData server :: Handling file data request " << std::endl;
 
+        // get file data request
         struct file_data_req_struct file_data_req;
-        recv_full(newsockfd, &file_data_req, sizeof(file_data_req));
-
+        recv_full(peer_sockfd, &file_data_req, sizeof(file_data_req));
+        
+        // parse file data response
+        int offset = file_data_req.offset;
+        int size = file_data_req.size;
         string files_dir = string(dnode_details->files_dir); 
         string file_path = files_dir + string("/") + string(file_data_req.file_name);
 
-        /*for now assume, the request is for entire file*/
-        // int file_size = file_data_req.size - file_data_req.offset;
-        // uint8_t *file_data = (uint8_t *)malloc(file_size);
-        // int bytes_read = fread_full(file_path.c_str(), file_data, file_size);
-        // std::cout << "Data server :: bytes read (from fs) : " << bytes_read << std::endl;
+        // fill response
+        struct file_data_res_struct file_data_res;
 
-        // int bytes_sent = send_full(newsockfd, file_data, file_size);
-        // std::cout << "Data server :: bytes sent (via net) : " << bytes_sent << std::endl;
+        int file_size = get_file_size(file_path.c_str());
+        if (offset < 0 || offset + size > file_size) { // can not server data request
+            file_data_res.res_type = DATA_TRANSFER_FAILURE;
+            file_data_res.payload_len =  0;    
+            send_full(peer_sockfd, &file_data_res, sizeof(file_data_res));
+            close(peer_sockfd);
+            continue;
+        }
 
-        close(newsockfd);
+        file_data_res.res_type = DATA_TRANSFER_SUCCESS;
+        file_data_res.payload_len = size;
+
+        int read_fd = open(file_path.c_str(), O_RDONLY);
+        lseek(read_fd, offset, SEEK_SET);
+        
+        uint8_t *chunk_data = (uint8_t *)malloc(sizeof(size));
+        int bytes_read = fread_full(read_fd, chunk_data, size);
+        int bytes_sent = send_full(peer_sockfd, chunk_data, size);
+
+        std::cout << "bytes read : " << bytes_read << std::endl;
+        std::cout << "bytes sent : " << bytes_sent << std::endl;
+
+        free(chunk_data);
+        close(read_fd);
+        close(peer_sockfd);
     }
 
     close(sockfd);

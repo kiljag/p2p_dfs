@@ -89,6 +89,7 @@ void handle_file_upload_req(int dnode_sockfd) {
     metadata->file_hash = file_hash;
     metadata->file_size = file_size;
     metadata->num_chunks = num_chunks;
+    metadata->file_index_data_size = file_index_data_size;
 
     file_metadata_map[file_hash] = metadata;
 
@@ -120,8 +121,9 @@ void handle_file_download_req(int dnode_sockfd) {
     recv_full(dnode_sockfd, &file_download_req, sizeof(file_download_req));
 
     // parse file download request
-    string fname =  string(file_download_req.file_name);
-    uint64_t fhash =  fname_map[fname];
+    uint64_t dnode_uid = file_download_req.dnode_uid;
+    string file_name =  string(file_download_req.file_name);
+    uint64_t fhash =  fname_map[file_name];
 
     // intialize file_index_data // todo
 
@@ -141,18 +143,21 @@ void handle_file_download_req(int dnode_sockfd) {
         peer_dnodes_list[i].flags = 0;
     }
 
-    // fill file download response
+    // send download response
     struct file_download_res_struct file_download_res;
     file_download_res.file_hash = fhash;
     file_download_res.file_size = file_metadata_map[fhash]->file_size;   
     file_download_res.num_peer_dnodes = num_peer_nodes;
-    file_download_res.file_index_data_len = 0;
+    file_download_res.file_index_data_size = file_metadata_map[fhash]->file_index_data_size;
+    send_full(dnode_sockfd, &file_download_res, sizeof(file_download_res));
 
-    // send response
-    send(dnode_sockfd, &file_download_res, sizeof(file_download_res), 0);
-
-    //send file index data and peer nodes data
-    send(dnode_sockfd, peer_dnodes_list, peer_dnodes_list_size, 0);
+    //send file index data
+    int file_index_data_size = file_download_res.file_index_data_size;
+    uint8_t *file_index_data = file_indexdata_map[fhash];
+    send_full(dnode_sockfd, file_index_data, file_index_data_size);
+    
+    //send peer nodes data
+    send_full(dnode_sockfd, peer_dnodes_list, peer_dnodes_list_size);
 
     return;
 }

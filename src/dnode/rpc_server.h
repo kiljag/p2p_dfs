@@ -8,7 +8,7 @@
 
 using namespace std;
 
-void handle_rpc_server(struct dnode_details_struct *dnode_details);
+void handle_rpc_server();
 
 #endif
 

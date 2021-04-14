@@ -32,6 +32,7 @@ struct file_metadata_struct { // details about a file
     uint64_t file_hash;
     int file_size;
     int num_chunks;
+    int file_index_data_size;
 };
 
 // public data structures (hub and peer dnodes)
@@ -81,7 +82,7 @@ struct file_download_res_struct {
     int file_size;
     int num_chunks;
     int num_peer_dnodes;
-    int file_index_data_len;
+    int file_index_data_size;
 };
 
 

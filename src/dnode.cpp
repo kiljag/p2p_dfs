@@ -28,9 +28,8 @@ listens for rfc commands via rfc_port
 
 using namespace std;
 
+
 struct dnode_details_struct dnode_details;
-
-
 
 
 void handle_node_join() {
@@ -122,7 +121,7 @@ int main(int argc, char* argv[]) {
 
     pid_t rpc_server_pid = fork();
     if (rpc_server_pid == 0) {
-        handle_rpc_server(&dnode_details);
+        handle_rpc_server();
     }
     cout << "rpc server pid : " << rpc_server_pid << endl;
 

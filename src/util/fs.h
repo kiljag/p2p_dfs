@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 /* reads the entire file */
-size_t get_file_size(char *file_path);
+size_t get_file_size(const char *file_path);
 
 int fread_full(int fd, uint8_t *buf, size_t size);
 

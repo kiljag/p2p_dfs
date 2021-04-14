@@ -8,7 +8,7 @@
 #include "fs.h"
 
 
-size_t get_file_size(char *file_path) {
+size_t get_file_size(const char *file_path) {
     struct stat st;
     stat(file_path, &st);
     return st.st_size;
@@ -16,12 +16,6 @@ size_t get_file_size(char *file_path) {
 
 /*to do : error checking*/
 int fread_full(int fd, uint8_t *buff, size_t size) {
-
-    // int fd = open(file_path, O_RDONLY);
-    // if (fd < 0) {
-    //     perror("unable to open file (read only mode).\n");
-    //     return -1;
-    // }
 
     int offset = 0;
     while(offset < size) {

@@ -23,7 +23,9 @@
 #include "../util/net.h"
 #include "../util/fs.h"
 
-void handle_file_upload(struct dnode_details_struct *dnode_details, int rpc_cli_fd, char *file_path) {
+extern struct dnode_details_struct dnode_details;
+
+void handle_file_upload(int rpc_cli_fd, char *file_path) {
 
     uint8_t chunk_buffer[FILE_CHUNK_SIZE];
 
@@ -34,7 +36,7 @@ void handle_file_upload(struct dnode_details_struct *dnode_details, int rpc_cli_
 
     string file_path_str(file_path);
     string file_name_str = file_path_str.substr(file_path_str.find_last_of("/") + 1, file_path_str.size());
-    string out_path = string(dnode_details->files_dir) + string("/") + file_name_str;
+    string out_path = string(dnode_details.files_dir) + string("/") + file_name_str;
 
     int num_complete_chunks = file_size / FILE_CHUNK_SIZE;
     int num_chunks = num_complete_chunks;
@@ -98,7 +100,7 @@ void handle_file_upload(struct dnode_details_struct *dnode_details, int rpc_cli_
     printf("file hash : %08lx\n", file_hash);
 
     // connect to hub
-    int hub_sockfd = connect_to_server(dnode_details->hub_ip, dnode_details->hub_port);
+    int hub_sockfd = connect_to_server(dnode_details.hub_ip, dnode_details.hub_port);
 
     // send hub request (file upload request)
     struct hub_cmd_struct hub_cmd;
@@ -107,7 +109,7 @@ void handle_file_upload(struct dnode_details_struct *dnode_details, int rpc_cli_
 
     // send the file upload request details
     struct file_upload_req_struct file_upload_req;
-    file_upload_req.dnode_uid = dnode_details->uid;
+    file_upload_req.dnode_uid = dnode_details.uid;
     file_upload_req.file_hash = file_hash;
     file_upload_req.file_size = file_size;
     memcpy(file_upload_req.file_name, file_name_str.c_str(), file_name_str.size() + 1); // include null byte
@@ -132,92 +134,119 @@ void handle_file_upload(struct dnode_details_struct *dnode_details, int rpc_cli_
     return;
 }
 
-void handle_file_download(struct dnode_details_struct *dnode_details, int rpc_cli_fd, char *file_name) {
 
-    string file_name_str(file_name);
-    string out_path = string(dnode_details->files_dir) + string("/") + file_name_str;
-
-    struct hub_cmd_struct hub_cmd;
-    hub_cmd.cmd_type = FILE_DOWNLOAD;
-
-    // fill file download request details
-    struct file_download_req_struct file_download_req;
-    file_download_req.dnode_uid = dnode_details->uid;
-    memcpy(file_download_req.file_name, file_name, strlen(file_name) + 1);
-
-    // connect to hub
-    int hub_sockfd = connect_to_server(dnode_details->hub_ip, dnode_details->hub_port);
-
-    send(hub_sockfd, &hub_cmd, sizeof(hub_cmd), 0);
-    send(hub_sockfd, &file_download_req, sizeof(file_download_req), 0);
-
-    // recv file download response from server
-    struct file_download_res_struct file_download_res;
-    recv(hub_sockfd, &file_download_res, sizeof(file_download_res), 0);
-    int num_peer_dnodes = file_download_res.num_peer_dnodes;
-    int file_index_data_len = file_download_res.file_index_data_len;
-    std::cout << "num peer dnodes : " << num_peer_dnodes << std::endl;
-
-    // recv peer dnodes data and file index data from hub
-    struct peer_dnode_struct * peer_dnode_list;
-    peer_dnode_list = (struct peer_dnode_struct *)malloc(sizeof(struct peer_dnode_struct) * num_peer_dnodes);
-    uint8_t *file_index_data = (uint8_t *)malloc(file_index_data_len);
-
-    read_full(hub_sockfd, peer_dnode_list, sizeof(struct peer_dnode_struct) * num_peer_dnodes);
-    if (file_index_data_len > 0) {
-        read_full(hub_sockfd, file_index_data, file_index_data_len);
-    }
-
-    // retrieve first peer details
-    struct in_addr peer_ip = peer_dnode_list[0].ip;
-    short peer_port = peer_dnode_list[0].port;
-
-    int file_hash = file_download_res.file_hash;
-    int file_size = file_download_res.file_size;
-    uint8_t* file_data = (uint8_t *)malloc(file_size);
+void multi_threaded_download(struct file_download_res_struct *file_download_res,
+                            struct peer_dnode_struct * peer_dnodes_list,
+                            uint64_t *chunk_hashes, char *file_name) {
     
+
+    return;
+}
+
+void naive_download(struct file_download_res_struct *file_download_res,
+                    struct peer_dnode_struct * peer_dnodes_list,
+                    uint64_t *chunk_hashes, char *file_name) {
+    
+    // retrieve first peer details
+    struct in_addr peer_ip = peer_dnodes_list[0].ip;
+    short peer_port = peer_dnodes_list[0].port;
+
+    int file_hash = file_download_res->file_hash;
+    int file_size = file_download_res->file_size;
+    uint8_t* file_data = (uint8_t *)malloc(file_size);
     std::cout << "file size : " << file_size << endl;
 
     // connect to peer
     std::cout << "connecting to peer dnode.." << std::endl;
     std::cout << "peer port " << peer_port << std::endl;
-    int peer_fd = connect_to_server(peer_ip, peer_port);
-    
-    
-    // fill data request details
+    int peer_sockfd = connect_to_server(peer_ip, peer_port);
+
+    // fill data request details (download entire data)
     file_data_req_struct file_data_req;
     file_data_req.file_hash = file_hash;
     memcpy(file_data_req.file_name, file_name, strlen(file_name) + 1);
     file_data_req.offset = 0;
     file_data_req.size = file_size;
 
-    // send data request details
-    send_full(peer_fd, &file_data_req, sizeof(file_data_req));
+    // send data request details to peer
+    send_full(peer_sockfd, &file_data_req, sizeof(file_data_req));
 
     // recv chunk data from server
-    int bytes_read = recv_full(peer_fd, file_data, file_size);
-    // int bytes_read = recv_full(peer_fd, file_data, file_size, 0);
-    std::cout << "bytes read from peer : " << bytes_read << std::endl;
+    int bytes_recv= recv_full(peer_sockfd, file_data, file_size);
+    std::cout << "bytes recv from peer : " << bytes_recv << std::endl;
 
     // save file to storage
-    // fwrite_full(out_path.c_str(), file_data, file_size);
+    string file_name_str(file_name);
+    string out_path = string(dnode_details.files_dir) + string("/") + file_name_str;
+    int write_fd = open(out_path.c_str(), O_CREAT | O_WRONLY, 0644);
+    int bytes_written  = fwrite_full(write_fd, file_data, file_size);
+    std::cout << "bytes written (fs) : " << bytes_written << std::endl;
+    close(write_fd);
 
-    // disconnect from peer
-    disconnect_from_server(peer_fd);
+    free(file_data);
 
-    // disconnect from hub
-    disconnect_from_server(hub_sockfd);
+    //disconnect from peer
+    disconnect_from_server(peer_sockfd);
+    return;
+}
+
+void handle_file_download(int rpc_cli_fd, char *file_name) {
+
+    // connect to hub
+    int hub_sockfd = connect_to_server(dnode_details.hub_ip, dnode_details.hub_port);
+
+    // send download hub command
+    struct hub_cmd_struct hub_cmd;
+    hub_cmd.cmd_type = FILE_DOWNLOAD;
+    send_full(hub_sockfd, &hub_cmd, sizeof(hub_cmd));
+
+    // send download request details
+    struct file_download_req_struct file_download_req;
+    file_download_req.dnode_uid = dnode_details.uid;
+    memcpy(file_download_req.file_name, file_name, strlen(file_name) + 1);
+    send_full(hub_sockfd, &file_download_req, sizeof(file_download_req));
+
+    // recv file download response from server
+    struct file_download_res_struct file_download_res;
+    recv(hub_sockfd, &file_download_res, sizeof(file_download_res), 0);
+    int num_peer_dnodes = file_download_res.num_peer_dnodes;
+    int file_index_data_size = file_download_res.file_index_data_size;
+    std::cout << "num peer dnodes : " << num_peer_dnodes << std::endl;
+
+    // intialize file index data and peer dnodes data
+    uint8_t *file_index_data = (uint8_t *)malloc(file_index_data_size);
+    int peer_dnodes_list_size = sizeof(struct peer_dnode_struct) * num_peer_dnodes;
+    struct peer_dnode_struct * peer_dnodes_list;
+    peer_dnodes_list = (struct peer_dnode_struct *)malloc(peer_dnodes_list_size);
+    
+    // recieve file index data
+    recv_full(hub_sockfd, file_index_data, file_index_data_size);
+    uint64_t* chunk_hashes = (uint64_t *)file_index_data;
+
+    // recv peer nodes list
+    read_full(hub_sockfd, peer_dnodes_list,  peer_dnodes_list_size);
+    
+    /*
+    For now, download the entire data from single peer node
+    */
+    naive_download(&file_download_res, peer_dnodes_list, chunk_hashes, file_name);
+
+    // send success response to rpc client
+    struct rpc_res_struct rpc_res;
+    rpc_res.res_type = RPC_RES_SUCCEES;
+    rpc_res.payload_len = 0;
+    send_full(rpc_cli_fd, &rpc_res, sizeof(rpc_res));
 
     return;
 }
 
 
 // server process 3 (listens for rfc requests)
-void handle_rpc_server(struct dnode_details_struct *dnode_details) {
+void handle_rpc_server() {
 
     std::cout << "RPC server :: Starting!!" << std::endl;
     char* rpc_buffer = (char *)malloc(2048); // 2MB all-purpose buffer
-    int rpc_port = dnode_details->rpc_port;
+    int rpc_port = dnode_details.rpc_port;
     int sockfd = create_server(rpc_port);
 
     if(sockfd < 0) {
@@ -252,12 +281,12 @@ void handle_rpc_server(struct dnode_details_struct *dnode_details) {
         if (rpc_req.req_type == RPC_REQ_UPLOAD) {
             std::cout << "RPC server :: upload request " << std::endl;
             char *file_path = rpc_buffer;
-            handle_file_upload(dnode_details, newsockfd, file_path);
+            handle_file_upload(newsockfd, file_path);
 
-        } else if (rpc_req.req_type == RPC_REQ_UPLOAD) {
+        } else if (rpc_req.req_type == RPC_REQ_DOWNLOAD) {
             std::cout << "RPC server :: download request " << std::endl;
             char *file_name = rpc_buffer;
-            handle_file_download(dnode_details, newsockfd, file_name);
+            handle_file_download(newsockfd, file_name);
 
         } else {
             std::cout << "Invalid RPC command " << std::endl;
