@@ -113,6 +113,28 @@ void handle_node_join() {
 
 void handle_node_hello() {
 
+    // connect to hub
+    int hub_sockfd = connect_to_server(dnode_details.hub_ip, dnode_details.hub_port);
+
+    // send hub command
+    struct hub_cmd_struct hub_cmd;
+    hub_cmd.cmd_type = NODE_HELLO;
+    send_full(hub_sockfd, &hub_cmd, sizeof(hub_cmd));
+
+    // send node hello request
+    struct node_hello_req_struct node_hello_req;
+    node_hello_req.dnode_id = dnode_details.uid;
+    node_hello_req.ip = dnode_details.dnode_ip;
+    node_hello_req.port = dnode_details.dnode_data_port;
+    node_hello_req.flags = 0;
+    send_full(hub_sockfd, &node_hello_req, sizeof(node_hello_req));
+
+    // recv node hello response
+    struct node_hello_res_struct node_hello_res;
+    recv_full(hub_sockfd, &node_hello_res, sizeof(node_hello_res));
+
+    close(hub_sockfd);
+    return;
 }
 
 /*
@@ -148,7 +170,7 @@ int main(int argc, char* argv[]) {
     // initialize dnode
     string dnode_root_dir = string(argv[1]);
     initialize_dnode(dnode_root_dir);
-    printf("dnode uid : %08lx\n", dnode_details.uid); 
+    printf("dnode uid : %08lx\n", dnode_details.uid);
 
     // in case the node is joining for first time
     if(dnode_details.uid) { 

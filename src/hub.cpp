@@ -48,7 +48,7 @@ void handle_new_node_join(int dnode_sockfd) {
 
     // generate random id for the dnode
     uint64_t dnode_id = random64bit();
-    printf("new node joined : uid :9533 %08lx\n", dnode_id);
+    printf("new node joined : uid %08lx\n", dnode_id);
 
     // fill up dnode details
     struct dnode_struct *dnode_details = (struct dnode_struct *)malloc(sizeof(struct dnode_struct));
@@ -67,6 +67,43 @@ void handle_new_node_join(int dnode_sockfd) {
 
     return;
 }
+
+
+void handle_node_hello(int dnode_sockfd) {
+
+    // get node join request from dnode
+    struct node_hello_req_struct node_hello_req;
+    recv_full(dnode_sockfd, &node_hello_req, sizeof(node_hello_req));
+
+    // generate random id for the dnode
+    printf("node hello : uid %08lx\n", node_hello_req.dnode_id);
+
+    // fill up dnode details
+    uint64_t dnode_id = node_hello_req.dnode_id;
+    struct dnode_struct *dnode_details;
+    if (dnodes_map.find(dnode_id) != dnodes_map.end()) {
+        dnode_details = dnodes_map[dnode_id];
+    } else {
+        dnode_details = (struct dnode_struct *)malloc(sizeof(struct dnode_struct));
+    }
+     
+    dnode_details->uid = node_hello_req.dnode_id;
+    dnode_details->ip = node_hello_req.ip;
+    dnode_details->port = node_hello_req.port;
+    dnode_details->flags = 0; /*TODO :*/
+
+    // save dnode in memory
+    dnodes_map[dnode_id] = dnode_details;
+
+    // send result back to dnode
+    struct node_hello_res_struct node_hello_res;
+    node_hello_res.uid = dnode_id;
+    send(dnode_sockfd, &node_hello_res, sizeof(node_hello_res), 0);
+
+    return;
+}
+
+
 
 void handle_file_upload_req(int dnode_sockfd) {
     
@@ -205,6 +242,11 @@ int main(int argc, char** argv) {
             handle_new_node_join(newsockfd);
 
         } 
+        else if (hub_cmd.cmd_type == NODE_HELLO) {
+            std::cout << "Hub :: Node hello request" << std::endl;
+            handle_node_hello(newsockfd);
+
+        }
         else if (hub_cmd.cmd_type == FILE_UPLOAD) {
             std::cout << "Hub :: File upload request" << std::endl;
             handle_file_upload_req(newsockfd);

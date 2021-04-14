@@ -55,6 +55,18 @@ struct node_join_res_struct {
     uint64_t uid;
 };
 
+// NODE HELLO
+struct node_hello_req_struct {
+    uint64_t dnode_id;
+    struct in_addr ip;
+    short port;
+    uint16_t flags;
+};
+
+struct node_hello_res_struct {
+    uint64_t uid;
+};
+
 // FILE UPLOAD 
 
 struct file_upload_req_struct {
