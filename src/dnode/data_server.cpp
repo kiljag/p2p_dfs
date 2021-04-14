@@ -79,21 +79,37 @@ void handle_data_server(struct dnode_details_struct *dnode_details) {
             close(peer_sockfd);
             continue;
         }
+        std::cout << "file_size : " << file_size << std::endl;
+        std::cout << "offset : " << offset << std::endl;
+        std::cout << "size : " << size << std::endl;
 
         file_data_res.res_type = DATA_TRANSFER_SUCCESS;
         file_data_res.payload_len = size;
 
+        std::cout << "opening file : " << file_path.c_str() << std::endl; 
         int read_fd = open(file_path.c_str(), O_RDONLY);
-        lseek(read_fd, offset, SEEK_SET);
+        std::cout << "read fd : " << read_fd << std::endl;
+
+        if (read_fd < 0) {
+            perror("file opening error\n");
+            file_data_res.res_type = DATA_TRANSFER_FAILURE;
+            file_data_res.payload_len =  0;    
+            send_full(peer_sockfd, &file_data_res, sizeof(file_data_res));
+            close(peer_sockfd);
+            continue;
+        }
+        // lseek(read_fd, offset, SEEK_SET);
+
         
-        uint8_t *chunk_data = (uint8_t *)malloc(sizeof(size));
+        uint8_t *chunk_data = (uint8_t *)malloc(size);
         int bytes_read = fread_full(read_fd, chunk_data, size);
         int bytes_sent = send_full(peer_sockfd, chunk_data, size);
+        free(chunk_data);
 
         std::cout << "bytes read : " << bytes_read << std::endl;
         std::cout << "bytes sent : " << bytes_sent << std::endl;
 
-        free(chunk_data);
+        
         close(read_fd);
         close(peer_sockfd);
     }

@@ -4,6 +4,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <errno.h>
 
 #include "fs.h"
 
@@ -14,14 +16,16 @@ size_t get_file_size(const char *file_path) {
     return st.st_size;
 }
 
-/*to do : error checking*/
-int fread_full(int fd, uint8_t *buff, size_t size) {
 
+int fread_full(int fd, void *buffer, size_t size) {
+
+    char *buff = (char *)buffer;
     int offset = 0;
+
     while(offset < size) {
         int bytes_read = read(fd, buff + offset, size - offset);
         if (bytes_read < 0) {
-            perror("error in reading file\n");
+            perror("fread_full: error in reading file\n");
             return -1;
         }
         offset += bytes_read;
@@ -30,24 +34,37 @@ int fread_full(int fd, uint8_t *buff, size_t size) {
     return offset;
 }
 
-/*to do : error checking*/
-int fwrite_full(int fd, uint8_t *buff, size_t size) {
 
-    // int fd = open(file_path, O_CREAT | O_WRONLY, 0644);
-    // if (fd < 0) {
-    //     perror("unable to open file (write only mode).\n");
-    //     return -1;
-    // }
-
+int fwrite_full(int fd, void *buffer, size_t size) {
+    
+    char *buff = (char *)buffer;
     int offset = 0;
+
     while(offset < size) {
         int bytes_written  = write(fd, buff + offset, size - offset);
         if (bytes_written < 0) {
-            perror("error in writing file\n");
+            perror("fwrite_full: error in writing file\n");
             return -1;
         }
         offset += bytes_written;
     }
 
     return offset;
+}
+
+int directory_exists(const char *dir_path) {
+
+    DIR *dir = opendir(dir_path);
+    if (dir) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+void make_dir(const char *dir_name) {
+    int ret = mkdir(dir_name, 0777);
+    if (ret != 0) {
+        printf("make_dir failed\n");
+    }
 }

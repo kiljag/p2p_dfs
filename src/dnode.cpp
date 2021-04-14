@@ -6,9 +6,11 @@ listens for data transfer requests from other data nodes via dnode_port
 listens for rfc commands via rfc_port
 **/
 #include <iostream>
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -25,12 +27,58 @@ listens for rfc commands via rfc_port
 
 #include "hub/hub.h"
 #include "util/net.h"
+#include "util/fs.h"
 
 using namespace std;
 
 
 struct dnode_details_struct dnode_details;
 
+
+void initialize_dnode(string &dnode_root_dir) {
+
+    // create dnode root directory if it doesn't exist
+    if (!directory_exists(dnode_root_dir.c_str())) {
+        make_dir(dnode_root_dir.c_str());
+    }
+
+    string dnode_files_dir = dnode_root_dir + string("/files");
+    string dnode_meta_dir = dnode_root_dir + string("/meta");
+
+    if (!directory_exists(dnode_files_dir.c_str())) {
+        make_dir(dnode_files_dir.c_str());
+    }
+
+    if (!directory_exists(dnode_meta_dir.c_str())) {
+        make_dir(dnode_meta_dir.c_str());
+    }
+
+    std::cout << "dnode_root_dir  :: " << dnode_root_dir << std::endl;
+    std::cout << "dnode_files_dir :: " << dnode_files_dir << std::endl;
+    std::cout << "dnode_meta_dir  :: " << dnode_meta_dir << std::endl;
+
+    // store folders
+    memcpy(dnode_details.root_dir, dnode_root_dir.c_str(), dnode_root_dir.size()+1);
+    memcpy(dnode_details.files_dir, dnode_files_dir.c_str(), dnode_files_dir.size() + 1);
+    memcpy(dnode_details.meta_dir, dnode_meta_dir.c_str(), dnode_meta_dir.size() + 1);
+
+    string uid_file_path = dnode_meta_dir + string("/uid_file");
+    memcpy(dnode_details.uid_file_path, uid_file_path.c_str(), uid_file_path.size() + 1);
+
+    if( access(uid_file_path.c_str(), F_OK ) == 0 ) { // file exists
+        uint64_t uid;
+        int uid_fd = open(uid_file_path.c_str(), O_RDONLY);
+        read(uid_fd, &uid, sizeof(uid));
+        dnode_details.uid = uid; //restore the id
+        close(uid_fd);
+        
+    } else {
+        // file doesn't exist
+        dnode_details.uid = 0;
+    }
+
+    return;
+}
 
 void handle_node_join() {
 
@@ -53,11 +101,18 @@ void handle_node_join() {
     struct node_join_res_struct node_join_res;
     recv_full(hub_sockfd, &node_join_res, sizeof(node_join_res));
 
-    // save uid given by hub
+    // save uid given by hub (in fs as well)
     dnode_details.uid = node_join_res.uid;
+    int uid_fd = open(dnode_details.uid_file_path, O_CREAT | O_WRONLY, 0644);
+    fwrite_full(uid_fd, &dnode_details.uid, sizeof(dnode_details.uid));    
+    close(uid_fd);
 
     close(hub_sockfd);
     return;
+}
+
+void handle_node_hello() {
+
 }
 
 /*
@@ -71,20 +126,12 @@ int main(int argc, char* argv[]) {
         std::exit(1);
     }
 
-    std::cout << "dnode dir :: " << argv[1] << std::endl;
-    std::cout << "hub ip:port :: " << argv[2] << std::endl;
-    std::cout << "hub cmd port :: " << argv[3] << std::endl;
-    std::cout << "dnode data port :: " << argv[4] << std::endl;
-    std::cout << "rpc cmd port :: " << argv[5] << std::endl; 
+    // std::cout << "dnode dir :: " << argv[1] << std::endl;
+    // std::cout << "hub ip:port :: " << argv[2] << std::endl;
+    // std::cout << "hub cmd port :: " << argv[3] << std::endl;
+    // std::cout << "dnode data port :: " << argv[4] << std::endl;
+    // std::cout << "rpc cmd port :: " << argv[5] << std::endl; 
 
-
-    string dnode_root_dir = string(argv[1]);
-    string dnode_files_dir = dnode_root_dir + string("/files");
-    string dnode_meta_dir = dnode_root_dir + string("/meta");
-
-    std::cout << "dnode_root_dir  :: " << dnode_root_dir << std::endl;
-    std::cout << "dnode_files_dir :: " << dnode_files_dir << std::endl;
-    std::cout << "dnode_meta_dir  :: " << dnode_meta_dir << std::endl;
 
     // store hub details
     dnode_details.hub_ip = parse_ip_addr(argv[2]);
@@ -98,13 +145,17 @@ int main(int argc, char* argv[]) {
     dnode_details.dnode_data_port = (short)atoi(argv[4]);
     dnode_details.rpc_port = (short)atoi(argv[5]);
 
-    // store folders
-    memcpy(dnode_details.root_dir, dnode_root_dir.c_str(), dnode_root_dir.size()+1);
-    memcpy(dnode_details.files_dir, dnode_files_dir.c_str(), dnode_files_dir.size() + 1);
-    memcpy(dnode_details.meta_dir, dnode_meta_dir.c_str(), dnode_meta_dir.size() + 1);
+    // initialize dnode
+    string dnode_root_dir = string(argv[1]);
+    initialize_dnode(dnode_root_dir);
+    printf("dnode uid : %08lx\n", dnode_details.uid); 
 
     // in case the node is joining for first time
-    handle_node_join();
+    if(dnode_details.uid) { 
+        handle_node_hello();
+    } else {
+        handle_node_join();
+    }
     printf("dnode uid : %08lx\n", dnode_details.uid); 
     
     // char dnode_buf[2048];

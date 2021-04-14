@@ -49,9 +49,10 @@ struct dnode_details_struct {
     short dnode_data_port;
     short rpc_port;
     uint64_t uid;
-    char root_dir[128];
-    char files_dir[128];
-    char meta_dir[128];
+    char root_dir[256];
+    char files_dir[256];
+    char meta_dir[256];
+    char uid_file_path[256];
 };
 
 #endif

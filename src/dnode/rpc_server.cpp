@@ -37,6 +37,7 @@ void handle_file_upload(int rpc_cli_fd, char *file_path) {
     string file_path_str(file_path);
     string file_name_str = file_path_str.substr(file_path_str.find_last_of("/") + 1, file_path_str.size());
     string out_path = string(dnode_details.files_dir) + string("/") + file_name_str;
+    std::cout << "out_file_path : " << out_path << std::endl; 
 
     int num_complete_chunks = file_size / FILE_CHUNK_SIZE;
     int num_chunks = num_complete_chunks;
@@ -85,7 +86,7 @@ void handle_file_upload(int rpc_cli_fd, char *file_path) {
         chunk_hash = compute_hash(chunk_buffer, partial_chunk_size);
         chunk_hash_list[num_chunks - 1] = chunk_hash;
 
-        bytes_written = fwrite_full(write_fd, chunk_buffer, FILE_CHUNK_SIZE);
+        bytes_written = fwrite_full(write_fd, chunk_buffer, partial_chunk_size);
         total_bytes_written += bytes_written;
 
         printf("i : %02d, chunk_hash : %08lx\n", num_chunks, chunk_hash);
@@ -94,6 +95,9 @@ void handle_file_upload(int rpc_cli_fd, char *file_path) {
 
     std::cout << "total bytes read : " << total_bytes_read << std::endl;
     std::cout << "total bytes written : " << total_bytes_written << std::endl;
+    
+    close(read_fd);
+    close(write_fd);
 
     // compute file hash
     uint64_t file_hash = compute_hash(file_index_data, file_index_data_size);
