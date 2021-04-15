@@ -32,8 +32,12 @@ inline void send_cmd_to_hub(int hub_sockfd, uint16_t command) {
 
 struct hub_details_struct {
     uint64_t uid;
-    int hub_port;
+    struct in_addr hub_ip;
+    int hub_cmd_port;
+    int dnode_cmd_port;
+    char hub_root_dir[512];
 };
+
 // hub only data structures
 
 struct dnode_struct{ // details about a dnode

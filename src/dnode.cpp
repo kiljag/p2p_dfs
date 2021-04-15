@@ -188,13 +188,13 @@ int main(int argc, char* argv[]) {
     // }
 
     pthread_t rpc_server_tid;
-    if (pthread_create(&rpc_server_tid, NULL, handle_rpc_server, NULL) < 0) {
+    if (pthread_create(&rpc_server_tid, NULL, handle_rpc_server, NULL) != 0) {
         perror("Failed to create rpc server thread");
         exit(EXIT_FAILURE);
     }
 
     pthread_t data_server_tid;
-    if (pthread_create(&data_server_tid, NULL, handle_data_server, NULL) < 0) {
+    if (pthread_create(&data_server_tid, NULL, handle_data_server, NULL) != 0) {
         perror("Failed to create data server thread\n");
         exit(EXIT_FAILURE);
     }

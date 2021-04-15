@@ -16,8 +16,10 @@
 #include <string.h>
 
 #include "hub.h"
+#include "dnode_req_server.h"
 #include "../util/net.h"
 #include "../util/hash.h"
+
 
 using namespace std;
 
@@ -102,7 +104,6 @@ void handle_node_hello(int dnode_sockfd) {
 }
 
 
-
 void handle_file_upload_req(int dnode_sockfd) {
     
     // char file_index_data[4096]; // 4MB will suffice for this project
@@ -148,6 +149,7 @@ void handle_file_upload_req(int dnode_sockfd) {
 
     return;
 }
+
 
 void handle_file_download_req(int dnode_sockfd) {
 
@@ -219,14 +221,14 @@ void handle_file_downloaded_ack(int dnode_sockfd) {
 }
 
 
-void handle_dnode_req_server() {
+void *handle_dnode_req_server(void *args) {
 
-    int sockfd = create_server(hub_details.hub_port);
+    int sockfd = create_server(hub_details.hub_cmd_port);
     
     char buffer[2048]; // multi-purpose hub buffer
 
     if (listen(sockfd, 5) == 0) {
-        std::cout << "Hub :: listening for dnode requests on " << hub_details.hub_port << std::endl;
+        printf("Hub :: listening for dnode requests on %d\n", hub_details.hub_cmd_port);
     }
 
     struct sockaddr_in cli_addr;
