@@ -14,6 +14,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <thread>
+#include <vector>
+#include <vector>
 
 #include "dnode.h"
 #include "rpc_server.h"
@@ -22,6 +25,9 @@
 #include "../util/hash.h"
 #include "../util/net.h"
 #include "../util/fs.h"
+
+#include <vector>
+#include "cptl_stl.h"
 
 extern struct dnode_details_struct dnode_details;
 
@@ -138,13 +144,115 @@ void handle_file_upload(int rpc_cli_fd, char *file_path) {
     return;
 }
 
+void download_thread(struct file_download_res_struct *file_download_res,
+                            struct peer_dnode_struct * peer_dnodes_list,
+                            uint64_t *chunk_hashes, 
+                            char *file_name,
+                            int i,
+                            int numThreads,
+                            std::vector<int> &numChunksForEachThread,
+                            std::vector <uint8_t *> &downloadedData
+                            )
+{
+    // retrieve i-th peer details
+    struct in_addr peer_ip = peer_dnodes_list[i].ip;
+    short peer_port = peer_dnodes_list[i].port;
+
+    int file_hash = file_download_res->file_hash;
+    int file_size = file_download_res->file_size;
+    // std::cout << "file size : " << file_size << endl;
+    int numberOfChunks = numChunksForEachThread[i];
+    // connect to peer
+    std::cout << "connecting to peer dnode.." << std::endl;
+    std::cout << "peer port " << peer_port << std::endl;
+    int peer_sockfd = connect_to_server(peer_ip, peer_port);
+
+    // fill data request details 
+    file_data_req_struct file_data_req;
+    file_data_req.file_hash = file_hash;
+    memcpy(file_data_req.file_name, file_name, strlen(file_name) + 1);
+    file_data_req.offset = 0;
+    for(int j=0;j<i;j++) file_data_req.offset += numChunksForEachThread[j]*FILE_CHUNK_SIZE;
+    file_size = FILE_CHUNK_SIZE*(numChunksForEachThread[i]-1);
+    if(i==numThreads-1){
+        file_size += ((file_download_res->file_size)%FILE_CHUNK_SIZE);
+    }
+    else{
+        file_size += FILE_CHUNK_SIZE;
+    }
+
+    file_data_req.size = file_size;
+
+    // send data request details to peer
+    send_full(peer_sockfd, &file_data_req, sizeof(file_data_req));
+
+    // recv chunk data from server
+    uint8_t* file_data = (uint8_t *)malloc(file_data_req.size);
+
+    int bytes_recv= recv_full(peer_sockfd, file_data, file_data_req.size);
+    std::cout << "bytes recv from peer : " << bytes_recv << std::endl;
+    downloadedData[i] = file_data;
+    free(file_data);
+
+    //disconnect from peer
+    disconnect_from_server(peer_sockfd);
+
+}
 
 void multi_threaded_download(struct file_download_res_struct *file_download_res,
                             struct peer_dnode_struct * peer_dnodes_list,
                             uint64_t *chunk_hashes, char *file_name) {
-    
-    
+    int numberOfPeers   = file_download_res->num_peer_dnodes;
+    int numberOfChunks  = file_download_res->num_chunks;
+    int numThreads      = min(numberOfChunks,numberOfPeers);
+    numThreads          = min(numThreads,5);
 
+    std::vector <int> numChunksForEachThread(numThreads,numberOfChunks/numThreads);
+    for(int i=0;i<(numberOfChunks%numThreads);i++) numChunksForEachThread[i]++;
+    std::vector<std::thread> Pool;
+    // uint8_t* downloadedData[numThreads];
+    std::vector <uint8_t *> downloadedData(numThreads);
+
+    for(int i=0;i<numThreads;i++){
+
+    
+        masterPool.push_back(std::thread(download_thread,
+        file_download_res,
+        peer_dnodes_list,
+        chunk_hashes,
+        file_name,
+        i,
+        numThreads,
+        numChunksForEachThread,
+        downloadedData
+        ));
+
+    }
+
+    for(int i=0;i<numThreads;i++){
+        Pool[i].join();
+    }
+    u_int8_t* file_data;
+    string file_name_str(file_name);
+    string out_path = string(dnode_details.files_dir) + string("/") + file_name_str;
+    int write_fd = open(out_path.c_str(), O_CREAT | O_WRONLY, 0644);
+    
+    for(int i=0;i<numThreads;i++){
+        int file_size = 0;
+        file_data = downloadedData[i];
+        file_size = FILE_CHUNK_SIZE*(numChunksForEachThread[i]-1);
+        if(i==numThreads-1){
+            file_size += ((file_download_res->file_size)%FILE_CHUNK_SIZE);
+        }
+        else{
+            file_size += FILE_CHUNK_SIZE;
+        }   
+        int bytes_written  = fwrite_full(write_fd, file_data, file_size);
+        std::cout << "bytes written (fs) : " << bytes_written << std::endl;
+    }
+    
+    close(write_fd);
+    
     return;
 }
 
