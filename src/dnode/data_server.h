@@ -4,6 +4,6 @@
 
 #include "dnode.h"
 
-void handle_data_server();
+void *handle_data_server(void *args);
 
 #endif

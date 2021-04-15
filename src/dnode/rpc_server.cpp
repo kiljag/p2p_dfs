@@ -274,7 +274,7 @@ void handle_file_download(int rpc_cli_fd, char *file_name) {
 
 
 // server process 3 (listens for rfc requests)
-void handle_rpc_server() {
+void *handle_rpc_server(void *args) {
 
     std::cout << "RPC server :: Starting!!" << std::endl;
     char* rpc_buffer = (char *)malloc(2048); // 2MB all-purpose buffer

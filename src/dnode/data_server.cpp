@@ -98,7 +98,7 @@ void *socket_handler_threaded(void *args) {
 }
 
 
-void handle_data_server() {
+void *handle_data_server(void *args) {
 
     std::cout << "Data server :: starting !!" << std::endl;
     uint8_t *data_buffer = (uint8_t *)malloc(2048);

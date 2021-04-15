@@ -7,4 +7,4 @@ dnode:
 	g++ src/dnode.cpp `find src/util src/dnode -name "*.cpp"` -pthread -o bin/dnode
 
 hub:
-	g++ src/hub.cpp `find src/util src/hub -name "*.cpp"` -o bin/hub
+	g++ src/hub.cpp `find src/util src/hub -name "*.cpp"` -pthread -o bin/hub

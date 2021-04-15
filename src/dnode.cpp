@@ -11,6 +11,7 @@ listens for rfc commands via rfc_port
 #include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <pthread.h>
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -186,21 +187,38 @@ int main(int argc, char* argv[]) {
     //     handle_hub_server(hub_port);
     // }
 
-    pid_t data_server_pid = fork();
-    if (data_server_pid == 0) {
-        handle_data_server();
+    pthread_t rpc_server_tid;
+    if (pthread_create(&rpc_server_tid, NULL, handle_rpc_server, NULL) < 0) {
+        perror("Failed to create rpc server thread");
+        exit(EXIT_FAILURE);
     }
-    cout << "data server pid : " << data_server_pid << endl;
 
-    pid_t rpc_server_pid = fork();
-    if (rpc_server_pid == 0) {
-        handle_rpc_server();
+    pthread_t data_server_tid;
+    if (pthread_create(&data_server_tid, NULL, handle_data_server, NULL) < 0) {
+        perror("Failed to create data server thread\n");
+        exit(EXIT_FAILURE);
     }
-    cout << "rpc server pid : " << rpc_server_pid << endl;
 
-    int wstatus;
-    pid_t child_pid = wait(&wstatus);
-    std::cout << "child pid : " << child_pid << endl;
+    pthread_join(rpc_server_tid, NULL);
+    pthread_join(data_server_tid, NULL);
+
+    
+
+    // pid_t data_server_pid = fork();
+    // if (data_server_pid == 0) {
+    //     handle_data_server();
+    // }
+    // cout << "data server pid : " << data_server_pid << endl;
+
+    // pid_t rpc_server_pid = fork();
+    // if (rpc_server_pid == 0) {
+    //     handle_rpc_server();
+    // }
+    // cout << "rpc server pid : " << rpc_server_pid << endl;
+
+    // int wstatus;
+    // pid_t child_pid = wait(&wstatus);
+    // std::cout << "child pid : " << child_pid << endl;
 
     std::exit(0);
 }
