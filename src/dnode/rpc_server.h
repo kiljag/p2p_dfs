@@ -8,7 +8,7 @@
 
 using namespace std;
 
-void handle_rpc_server();
+void *handle_rpc_server(void *args);
 
 #endif
 

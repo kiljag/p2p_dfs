@@ -6,6 +6,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "../util/net.h"
+
 #define FILE_CHUNK_SIZE (1024*1024)  // 1 mb
 #define FILE_CHUNK_HASH_SIZE 8 // 64 bits
 
@@ -14,9 +16,26 @@
 #define NODE_HELLO 0x0002
 #define FILE_UPLOAD 0x0003
 #define FILE_DOWNLOAD 0x0004
+#define FILE_DOWNLOADED_ACK 0x0005
 
 struct hub_cmd_struct {
     uint16_t cmd_type;
+};
+
+inline void send_cmd_to_hub(int hub_sockfd, uint16_t command) {
+    struct hub_cmd_struct hub_cmd;
+    hub_cmd.cmd_type = command;
+    send_full(hub_sockfd, &hub_cmd, sizeof(hub_cmd));
+}
+
+// hub details
+
+struct hub_details_struct {
+    uint64_t uid;
+    struct in_addr hub_ip;
+    int hub_cmd_port;
+    int dnode_cmd_port;
+    char hub_root_dir[512];
 };
 
 // hub only data structures
@@ -97,7 +116,12 @@ struct file_download_res_struct {
     int file_index_data_size;
 };
 
+// FILE DOWNLOADED ACK 
 
+struct file_downloaded_ack_struct {
+    uint64_t dnode_uid;
+    uint64_t file_hash;
+};
 
 
 #endif

@@ -216,7 +216,7 @@ void multi_threaded_download(struct file_download_res_struct *file_download_res,
     for(int i=0;i<numThreads;i++){
 
     
-        Pool.push_back(std::thread(download_thread,
+        masterPool.push_back(std::thread(download_thread,
         file_download_res,
         peer_dnodes_list,
         chunk_hashes,
@@ -260,9 +260,10 @@ void naive_download(struct file_download_res_struct *file_download_res,
                     struct peer_dnode_struct * peer_dnodes_list,
                     uint64_t *chunk_hashes, char *file_name) {
     
-    // retrieve first peer details
-    struct in_addr peer_ip = peer_dnodes_list[0].ip;
-    short peer_port = peer_dnodes_list[0].port;
+    // retrieve last peer details
+    int num_peer_dnodes = file_download_res->num_peer_dnodes;
+    struct in_addr peer_ip = peer_dnodes_list[num_peer_dnodes - 1].ip;
+    short peer_port = peer_dnodes_list[num_peer_dnodes - 1].port;
 
     int file_hash = file_download_res->file_hash;
     int file_size = file_download_res->file_size;
@@ -324,7 +325,11 @@ void handle_file_download(int rpc_cli_fd, char *file_name) {
     recv(hub_sockfd, &file_download_res, sizeof(file_download_res), 0);
     int num_peer_dnodes = file_download_res.num_peer_dnodes;
     int file_index_data_size = file_download_res.file_index_data_size;
-    std::cout << "num peer dnodes : " << num_peer_dnodes << std::endl;
+
+    printf("file_hash : %016lx\n", file_download_res.file_hash);
+    printf("file size : %d \n", file_download_res.file_size);
+    printf("num_chunks: %d \n", file_download_res.num_chunks);
+    printf("num peer nodes:  %d\n", num_peer_dnodes);
 
     // intialize file index data and peer dnodes data
     uint8_t *file_index_data = (uint8_t *)malloc(file_index_data_size);
@@ -339,10 +344,32 @@ void handle_file_download(int rpc_cli_fd, char *file_name) {
     // recv peer nodes list
     read_full(hub_sockfd, peer_dnodes_list,  peer_dnodes_list_size);
     
+    // disconnect from hub
+    disconnect_from_server(hub_sockfd);
+
+
     /*
     For now, download the entire data from single peer node
     */
     naive_download(&file_download_res, peer_dnodes_list, chunk_hashes, file_name);
+
+    // connect to hub
+    hub_sockfd = connect_to_server(dnode_details.hub_ip, dnode_details.hub_port);
+    
+    // send file_downloaded_ack request to hub
+    // struct hub_cmd_struct hub_cmd;
+    // hub_cmd.cmd_type = FILE_DOWNLOADED_ACK;
+    // send_full(hub_sockfd, &hub_cmd, )
+    send_cmd_to_hub(hub_sockfd, FILE_DOWNLOADED_ACK);
+
+    // send ack to hub indicating this node is a source of file
+    struct file_downloaded_ack_struct file_downloaded_ack;
+    file_downloaded_ack.dnode_uid = dnode_details.uid;
+    file_downloaded_ack.file_hash = file_download_res.file_hash;
+    send_full(hub_sockfd, &file_downloaded_ack, sizeof(file_downloaded_ack));
+
+    // disconnect from server
+    disconnect_from_server(hub_sockfd);
 
     // send success response to rpc client
     struct rpc_res_struct rpc_res;
@@ -355,7 +382,7 @@ void handle_file_download(int rpc_cli_fd, char *file_name) {
 
 
 // server process 3 (listens for rfc requests)
-void handle_rpc_server() {
+void *handle_rpc_server(void *args) {
 
     std::cout << "RPC server :: Starting!!" << std::endl;
     char* rpc_buffer = (char *)malloc(2048); // 2MB all-purpose buffer

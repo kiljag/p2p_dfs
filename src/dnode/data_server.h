@@ -4,6 +4,6 @@
 
 #include "dnode.h"
 
-void handle_data_server(struct dnode_details_struct *dnode_details);
+void *handle_data_server(void *args);
 
 #endif
