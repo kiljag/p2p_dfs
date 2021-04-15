@@ -183,7 +183,8 @@ void handle_file_download_req(int dnode_sockfd) {
     // send download response
     struct file_download_res_struct file_download_res;
     file_download_res.file_hash = fhash;
-    file_download_res.file_size = file_metadata_map[fhash]->file_size;   
+    file_download_res.file_size = file_metadata_map[fhash]->file_size;
+    file_download_res.num_chunks = file_metadata_map[fhash]->num_chunks;   
     file_download_res.num_peer_dnodes = num_peer_nodes;
     file_download_res.file_index_data_size = file_metadata_map[fhash]->file_index_data_size;
     send_full(dnode_sockfd, &file_download_res, sizeof(file_download_res));
@@ -199,6 +200,25 @@ void handle_file_download_req(int dnode_sockfd) {
     return;
 }
 
+
+void handle_file_downloaded_ack(int dnode_sockfd) {
+
+    // get file_downloaded_ack
+    struct file_downloaded_ack_struct file_downloaded_ack;
+    recv_full(dnode_sockfd, &file_downloaded_ack, sizeof(file_downloaded_ack));
+
+    // parse contents
+    uint64_t dnode_uid = file_downloaded_ack.dnode_uid;
+    uint64_t file_hash =  file_downloaded_ack.file_hash;
+
+    // append the dnode to file sources map
+    if (fhash_map.find(file_hash) == fhash_map.end()) {
+        fhash_map[file_hash] = vector<uint64_t>();
+    }
+    fhash_map[file_hash].push_back(dnode_uid);
+    
+    return;
+}
 
 /*
 ./hub root_dir hub_port
@@ -255,6 +275,11 @@ int main(int argc, char** argv) {
         else if (hub_cmd.cmd_type == FILE_DOWNLOAD) {
             std::cout << "Hub :: File download request" << std::endl;
             handle_file_download_req(newsockfd);
+        }
+
+        else if (hub_cmd.cmd_type == FILE_DOWNLOADED_ACK) {
+            std::cout << "Hub :: File downloaded acknowledgement" << std::endl;
+            handle_file_downloaded_ack(newsockfd);
         }
 
         else {

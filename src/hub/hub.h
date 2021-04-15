@@ -14,6 +14,7 @@
 #define NODE_HELLO 0x0002
 #define FILE_UPLOAD 0x0003
 #define FILE_DOWNLOAD 0x0004
+#define FILE_DOWNLOADED_ACK 0x0005
 
 struct hub_cmd_struct {
     uint16_t cmd_type;
@@ -97,7 +98,12 @@ struct file_download_res_struct {
     int file_index_data_size;
 };
 
+// FILE DOWNLOADED ACK 
 
+struct file_downloaded_ack_struct {
+    uint64_t dnode_uid;
+    uint64_t file_hash;
+};
 
 
 #endif

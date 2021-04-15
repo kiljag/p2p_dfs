@@ -98,7 +98,7 @@ void handle_data_server(struct dnode_details_struct *dnode_details) {
             close(peer_sockfd);
             continue;
         }
-        // lseek(read_fd, offset, SEEK_SET);
+        lseek(read_fd, offset, SEEK_SET);
 
         
         uint8_t *chunk_data = (uint8_t *)malloc(size);
