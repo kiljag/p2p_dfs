@@ -16,18 +16,16 @@
 #include <string.h>
 #include <thread>
 #include <vector>
-#include <vector>
 
 #include "dnode.h"
 #include "rpc_server.h"
 
 #include "../hub/hub.h"
+
 #include "../util/hash.h"
 #include "../util/net.h"
 #include "../util/fs.h"
 
-#include <vector>
-#include "cptl_stl.h"
 
 extern struct dnode_details_struct dnode_details;
 
@@ -215,16 +213,15 @@ void multi_threaded_download(struct file_download_res_struct *file_download_res,
 
     for(int i=0;i<numThreads;i++){
 
-    
-        masterPool.push_back(std::thread(download_thread,
-        file_download_res,
-        peer_dnodes_list,
-        chunk_hashes,
-        file_name,
-        i,
-        numThreads,
-        numChunksForEachThread,
-        downloadedData
+        Pool.push_back(std::thread(download_thread,
+            file_download_res,
+            peer_dnodes_list,
+            chunk_hashes,
+            file_name,
+            i,
+            numThreads,
+            numChunksForEachThread,
+            downloadedData
         ));
 
     }
