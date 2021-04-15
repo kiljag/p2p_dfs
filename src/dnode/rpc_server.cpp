@@ -247,6 +247,12 @@ void handle_file_download(int rpc_cli_fd, char *file_name) {
 
     // connect to hub
     hub_sockfd = connect_to_server(dnode_details.hub_ip, dnode_details.hub_port);
+    
+    // send file_downloaded_ack request to hub
+    // struct hub_cmd_struct hub_cmd;
+    // hub_cmd.cmd_type = FILE_DOWNLOADED_ACK;
+    // send_full(hub_sockfd, &hub_cmd, )
+    send_cmd_to_hub(hub_sockfd, FILE_DOWNLOADED_ACK);
 
     // send ack to hub indicating this node is a source of file
     struct file_downloaded_ack_struct file_downloaded_ack;

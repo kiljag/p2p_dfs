@@ -55,4 +55,8 @@ struct dnode_details_struct {
     char uid_file_path[256];
 };
 
+struct dt_thread_args_struct {
+    int sockfd;
+};
+
 #endif

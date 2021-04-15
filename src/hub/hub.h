@@ -6,6 +6,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "../util/net.h"
+
 #define FILE_CHUNK_SIZE (1024*1024)  // 1 mb
 #define FILE_CHUNK_HASH_SIZE 8 // 64 bits
 
@@ -20,6 +22,18 @@ struct hub_cmd_struct {
     uint16_t cmd_type;
 };
 
+inline void send_cmd_to_hub(int hub_sockfd, uint16_t command) {
+    struct hub_cmd_struct hub_cmd;
+    hub_cmd.cmd_type = command;
+    send_full(hub_sockfd, &hub_cmd, sizeof(hub_cmd));
+}
+
+// hub details
+
+struct hub_details_struct {
+    uint64_t uid;
+    int hub_port;
+};
 // hub only data structures
 
 struct dnode_struct{ // details about a dnode

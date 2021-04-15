@@ -188,7 +188,7 @@ int main(int argc, char* argv[]) {
 
     pid_t data_server_pid = fork();
     if (data_server_pid == 0) {
-        handle_data_server(&dnode_details);
+        handle_data_server();
     }
     cout << "data server pid : " << data_server_pid << endl;
 
