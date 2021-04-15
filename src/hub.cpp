@@ -41,6 +41,9 @@ map<string, uint64_t> fname_map;
 map<uint64_t, struct dnode_struct *> dnodes_map;
 
 
+// peer hub details
+map<uint64_t, struct peer_hub_struct *> peer_hubs_map;
+
 struct hub_details_struct hub_details;
 
 

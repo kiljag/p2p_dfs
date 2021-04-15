@@ -25,7 +25,7 @@ int create_server(short port) {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         printf("socket creation failed..");
-        std::exit(EXIT_FAILURE);
+        return -1;
     }
 
     // assign ip, port
@@ -37,7 +37,7 @@ int create_server(short port) {
     if(bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) != 0) {
         // printf("failed to bind to server port %d");
         std::cout << "failed to bind to port " << port << std::endl;
-        std::exit(EXIT_FAILURE);
+        return -1;
     }
 
     return sockfd;

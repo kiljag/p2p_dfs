@@ -11,15 +11,22 @@
 #define FILE_CHUNK_SIZE (1024*1024)  // 1 mb
 #define FILE_CHUNK_HASH_SIZE 8 // 64 bits
 
-// commands supported by a hub
-#define NODE_JOIN 0x0001
-#define NODE_HELLO 0x0002
-#define FILE_UPLOAD 0x0003
-#define FILE_DOWNLOAD 0x0004
-#define FILE_DOWNLOADED_ACK 0x0005
+// commands used by a dnode
+#define NODE_JOIN            0x00000001
+#define NODE_HELLO           0x00000002
+#define FILE_UPLOAD          0x00000003
+#define FILE_DOWNLOAD        0x00000004
+#define FILE_DOWNLOADED_ACK  0x00000005
+
+// commands used by peer hub
+#define HUB_JOIN             0x00010001
+#define HUB_HELLO            0x00010002
+#define HUB_QUERY_FILE_SRCS  0x00010003
+
+
 
 struct hub_cmd_struct {
-    uint16_t cmd_type;
+    uint32_t cmd_type;
 };
 
 inline void send_cmd_to_hub(int hub_sockfd, uint16_t command) {
@@ -39,6 +46,14 @@ struct hub_details_struct {
 };
 
 // hub only data structures
+
+// store details about a peer hub
+struct peer_hub_struct {
+    uint64_t uid;
+    struct in_addr ip;
+    short port;
+    uint16_t flags;
+};
 
 struct dnode_struct{ // details about a dnode
     uint64_t uid;
@@ -121,6 +136,38 @@ struct file_download_res_struct {
 struct file_downloaded_ack_struct {
     uint64_t dnode_uid;
     uint64_t file_hash;
+};
+
+
+/*===============================*/
+/*== HUB TO HUB COMMUNICATION ===*/
+/*===============================*/
+
+struct hub_join_req_struct {
+    uint64_t uid;
+    struct in_addr ip;
+    short port;
+    int flags;
+};
+
+struct hub_join_res_struct {
+    uint64_t dummy;
+};
+
+
+struct query_file_srcs_req_struct {
+    uint64_t file_hash;
+};
+
+struct query_file_srcs_res_struct {
+    uint64_t num_dnodes;
+};
+
+struct src_dnode_struct {
+    uint64_t dnode_id;
+    struct in_addr ip;
+    short port;
+    int flags;
 };
 
 

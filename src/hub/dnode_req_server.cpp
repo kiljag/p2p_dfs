@@ -38,6 +38,9 @@ extern map<string, uint64_t> fname_map;
 // to store dnode_details
 extern map<uint64_t, struct dnode_struct *> dnodes_map;
 
+extern map<uint64_t, struct peer_hub_struct *> peer_hubs_map;
+
+
 extern hub_details_struct hub_details;
 
 void handle_new_node_join(int dnode_sockfd) {
@@ -168,6 +171,15 @@ void handle_file_download_req(int dnode_sockfd) {
     vector<uint64_t> dnode_ids = fhash_map[fhash];
     int num_peer_nodes = dnode_ids.size();
 
+    // collect peer file sources from other hubs
+    // int num_peer_src_nodes = 0;
+    // if (peer_hubs_map.size() > 0) {
+    //     // for now, only from one peer hub
+    //     auto it = peer_hubs_map.begin();
+    //     struct peer_hub_struct * 
+        
+    // }
+
     // initialize peer_dnodes_list
     struct peer_dnode_struct * peer_dnodes_list;
     int peer_dnodes_list_size = sizeof(struct peer_dnode_struct) * num_peer_nodes;
@@ -180,6 +192,7 @@ void handle_file_download_req(int dnode_sockfd) {
         peer_dnodes_list[i].flags = 0;
     }
 
+    
     // send download response
     struct file_download_res_struct file_download_res;
     file_download_res.file_hash = fhash;
