@@ -223,12 +223,12 @@ void handle_file_downloaded_ack(int dnode_sockfd) {
 
 void *handle_dnode_req_server(void *args) {
 
-    int sockfd = create_server(hub_details.hub_cmd_port);
     
-    char buffer[2048]; // multi-purpose hub buffer
+
+    int sockfd = create_server(hub_details.dnode_cmd_port);
 
     if (listen(sockfd, 5) == 0) {
-        printf("Hub :: listening for dnode requests on %d\n", hub_details.hub_cmd_port);
+        printf("Hub :: listening for dnode requests on %d\n", hub_details.dnode_cmd_port);
     }
 
     struct sockaddr_in cli_addr;

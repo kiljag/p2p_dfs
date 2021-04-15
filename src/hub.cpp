@@ -60,10 +60,14 @@ int main(int argc, char** argv) {
     }
 
     char* hub_root_dir = argv[1];
-
     hub_details.hub_cmd_port = std::stoi(argv[2]);
-    hub_details.dnode_cmd_port = std::stoi(argv[2]);
+    hub_details.dnode_cmd_port = std::stoi(argv[3]);
     memcpy(hub_details.hub_root_dir, hub_root_dir, strlen(hub_root_dir) + 1);
+
+    printf("hub root directory : %s\n", hub_details.hub_root_dir);
+    printf("hub_cmd_port (listen for peer hubs) : %d\n", hub_details.hub_cmd_port);
+    printf("hub_dnode_port (listenf for dnodes) : %d\n", hub_details.dnode_cmd_port);
+
 
     pthread_t hub_req_server_tid;
     if (pthread_create(&hub_req_server_tid, NULL, handle_hub_req_server, NULL) != 0) {
