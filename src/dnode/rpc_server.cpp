@@ -266,12 +266,12 @@ void *download_thread_handler(void *args) {
     while(1) {
 
         pthread_mutex_lock(num_chunks_downloaded_lock);
-        printf("\ncheck for downloaded chunks..\n");
+        // printf("\ncheck for downloaded chunks..\n");
         if (*num_chunks_downloaded_ptr >= threads_args->max_chunk_index) {
             printf("all the downloadable chunks are downloaded..\n");
             pthread_mutex_unlock(num_chunks_downloaded_lock);
             break;
-        } 
+        }
         pthread_mutex_unlock(num_chunks_downloaded_lock);
 
         struct download_chunk_struct  chunk_struct;
@@ -280,7 +280,7 @@ void *download_thread_handler(void *args) {
         // take an available chunk which is neither downloaded not downloading
         
         pthread_mutex_lock(chunks_list_lock);
-        printf("searching a downloadable chunk..\n");
+        // printf("searching a downloadable chunk..\n");
         int chunk_index = -1;
         for (int i = current_chunk_index; i < max_chunk_index; i++) {
             if (chunks_list[i].is_downloaded == 0 && chunks_list[i].is_downloading == 0) {
@@ -300,15 +300,18 @@ void *download_thread_handler(void *args) {
 
         // take an available peer (which server mininum number of chunks)
         pthread_mutex_lock(src_dnodes_list_lock);
-        printf("searching an online peer dnode details..\n");
+        // printf("searching an online peer dnode details..\n");
         int min_dnode_index = -1;
         int min_chunks_served = 1000000;
         for (int i = 0; i < num_peer_nodes; i++) {
             if (src_dnodes_list[i].is_online && 
                 src_dnodes_list[i].chunks_served < min_chunks_served) {
-                min_dnode_index = i;
-                min_chunks_served = src_dnodes_list[i].chunks_served;
-                mempcpy(&dnode_struct, &src_dnodes_list[i], sizeof(dnode_struct));
+                
+                if (min_dnode_index < 0) {
+                    min_dnode_index = i;
+                    min_chunks_served = src_dnodes_list[i].chunks_served;
+                    mempcpy(&dnode_struct, &src_dnodes_list[i], sizeof(dnode_struct));
+                }
             }
         }
         if (min_dnode_index < 0) { // no online peer is available
@@ -353,7 +356,7 @@ void *download_thread_handler(void *args) {
         // uint8_t *buffer = (uint8_t *)malloc(sizeof(chunk_struct.size));
 
         int buffer_offset = chunk_struct.offset - (current_chunk_index * FILE_CHUNK_SIZE);
-        printf("buffer_offset : %d\n", buffer_offset);
+        // printf("buffer_offset : %d\n", buffer_offset);
         int bytes_recv = recv_full(peer_sockfd, download_buffer + buffer_offset, chunk_struct.size);
         // int bytes_recv = recv_full(peer_sockfd, buffer, chunk_struct.size);
         std::cout << "bytes recv from peer : " << bytes_recv << std::endl << std::endl;
@@ -377,8 +380,10 @@ void *download_thread_handler(void *args) {
         // update data structures
         pthread_mutex_lock(chunks_list_lock);
         pthread_mutex_lock(num_chunks_downloaded_lock);
+        pthread_mutex_lock(src_dnodes_list_lock);
 
         chunks_list[chunk_struct.index].is_downloaded = 1;
+        src_dnodes_list[min_dnode_index].chunks_served++;
 
         while(*num_chunks_downloaded_ptr < max_chunk_index) {
             if (chunks_list[*num_chunks_downloaded_ptr].is_downloaded) {
@@ -390,6 +395,7 @@ void *download_thread_handler(void *args) {
             }
         }
 
+        pthread_mutex_unlock(src_dnodes_list_lock);
         pthread_mutex_unlock(num_chunks_downloaded_lock);
         pthread_mutex_unlock(chunks_list_lock);
 

@@ -33,6 +33,7 @@ uint64_t compute_hash(const void * data, size_t l)
 
 uint64_t random64bit() {
 
+  srand(time(NULL));
   uint64_t lhalf = (uint64_t)rand() << 32;
   uint64_t rhalf = (uint64_t)(rand());
 

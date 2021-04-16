@@ -10,10 +10,10 @@
 #include "fs.h"
 
 
-size_t get_file_size(const char *file_path) {
+int get_file_size(const char *file_path) {
     struct stat st;
     stat(file_path, &st);
-    return st.st_size;
+    return (int)(st.st_size);
 }
 
 
