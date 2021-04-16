@@ -101,7 +101,7 @@ void hub_hello(char *peer_hub_ip_str) {
 
 int main(int argc, char** argv) {
 
-    if (argc < 4) {
+    if (argc < 5) {
         std::cout << "Insufficient arguments" << std::endl;
         std::exit(0);
     }
@@ -122,6 +122,11 @@ int main(int argc, char** argv) {
 
     // struct in_addr hub_ip;
     // get_ip_address(&hub_ip);
+
+    std::cout << "self ip : " << argv[4] << std::endl;
+    // string self_ip("127.0.0.1");
+    string self_ip(argv[4]);
+    memcpy(hub_details.hub_ip, self_ip.c_str(), self_ip.size() + 1);
 
     pthread_t hub_req_server_tid;
     if (pthread_create(&hub_req_server_tid, NULL, handle_hub_req_server, NULL) != 0) {
