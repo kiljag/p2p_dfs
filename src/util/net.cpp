@@ -53,7 +53,7 @@ int connect_to_server(struct in_addr server_ip, short server_port) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         perror("Unable to create hub socket\n");
-        exit(0);
+        return -1;
     }
     
     struct sockaddr_in serv_addr;
@@ -65,7 +65,7 @@ int connect_to_server(struct in_addr server_ip, short server_port) {
     // connect to hub
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         perror("Unable to connect to hub!!");
-        exit(0);
+        return -1;
     }
 
     return sockfd;
@@ -115,11 +115,12 @@ int read_full(int sockfd, void *buff, int size) {
 }
 
 /* write entire buff to fd */
-int write_full(int sockfd, void *buff, int size) {
+int write_full(int sockfd, void *buffer, int size) {
 
+    char *buff = (char *)buffer;
     int offset = 0;
     while (offset < size) {
-        int bytes_written = send(sockfd, buff, size - offset, 0);
+        int bytes_written = send(sockfd, buff + offset, size - offset, 0);
         if (bytes_written < 0) {
             return -1;
         }
@@ -130,12 +131,12 @@ int write_full(int sockfd, void *buff, int size) {
     return offset;
 }
 
-int recv_full(int sockfd, void *buff, int size) {
-
+int recv_full(int sockfd, void *buffer, int size) {
+    char *buff = (char *)buffer;
     int offset = 0;
     while (offset < size) {
-        int bytes_recv = recv(sockfd, buff, size - offset, 0);
-        std::cout << "bytes recv : " << bytes_recv << std::endl;
+        int bytes_recv = recv(sockfd, buff + offset, size - offset, 0);
+        // std::cout << "bytes recv : " << bytes_recv << std::endl;
         if (bytes_recv < 0) {
             perror("peer node failed\n");
             return -1;
@@ -147,12 +148,12 @@ int recv_full(int sockfd, void *buff, int size) {
     return offset;
 }
 
-int send_full(int sockfd, void *buff, int size) {
-
+int send_full(int sockfd, void *buffer, int size) {
+    char *buff = (char *)buffer;
     int offset = 0;
     while (offset < size) {
-        int bytes_sent = send(sockfd, buff, size - offset, 0);
-        std::cout << "bytes sent : " << bytes_sent << std::endl;
+        int bytes_sent = send(sockfd, buff + offset, size - offset, 0);
+        // std::cout << "bytes sent : " << bytes_sent << std::endl;
         if (bytes_sent < 0) {
             perror("peer node failed\n");
             return -1;
@@ -162,5 +163,4 @@ int send_full(int sockfd, void *buff, int size) {
     }
 
     return offset;
-
 }

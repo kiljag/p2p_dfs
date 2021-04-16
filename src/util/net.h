@@ -19,8 +19,8 @@ struct in_addr parse_ip_addr(char *ip_port);
 short parse_port(char *ip_port);
 
 /* some network read utilities */
-int read_full(int sockfd, void *buff, int size);
-int write_full(int sockfd, void *buff, int size); 
+// int read_full(int sockfd, void *buff, int size);
+// int write_full(int sockfd, void *buff, int size); 
 
 int recv_full(int sockfd, void *buff, int size);
 int send_full(int sockfd, void *buff, int size);

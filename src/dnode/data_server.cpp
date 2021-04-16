@@ -39,14 +39,22 @@ void handle_data_transfer(int peer_sockfd) {
     // parse file data response
     int offset = file_data_req.offset;
     int size = file_data_req.size;
+    
+    printf("req_file_offset : %d\n", offset);
+    printf("req_flle_chunk_size :  %d\n", size);
+
     string files_dir = string(dnode_details.files_dir); 
     string file_path = files_dir + string("/") + string(file_data_req.file_name);
 
+    int file_size = get_file_size(file_path.c_str());
+
+    printf("file_path : %s\n", file_path.c_str());
+    printf("file size : %d\n", file_size);
+
     // fill response
     struct file_data_res_struct file_data_res;
-
-    int file_size = get_file_size(file_path.c_str());
     if (offset < 0 || offset + size > file_size) { // can not server data request
+        printf("error : size + offset > file_size\n");
         file_data_res.res_type = DATA_TRANSFER_FAILURE;
         file_data_res.payload_len =  0;    
         send_full(peer_sockfd, &file_data_res, sizeof(file_data_res));
@@ -54,9 +62,9 @@ void handle_data_transfer(int peer_sockfd) {
         return;
     }
 
-    std::cout << "file_size : " << file_size << std::endl;
-    std::cout << "offset : " << offset << std::endl;
-    std::cout << "size : " << size << std::endl;
+    // std::cout << "file_size : " << file_size << std::endl;
+    // std::cout << "offset : " << offset << std::endl;
+    // std::cout << "size : " << size << std::endl;
 
     file_data_res.res_type = DATA_TRANSFER_SUCCESS;
     file_data_res.payload_len = size;
@@ -78,6 +86,7 @@ void handle_data_transfer(int peer_sockfd) {
     // send the entire requested chunk in one go
     uint8_t *chunk_data = (uint8_t *)malloc(size);
     int bytes_read = fread_full(read_fd, chunk_data, size);
+    printf("chunk checksum : %08lx\n", compute_hash(chunk_data, size));
     int bytes_sent = send_full(peer_sockfd, chunk_data, size);
     free(chunk_data);
 

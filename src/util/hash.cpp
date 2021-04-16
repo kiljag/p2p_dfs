@@ -1,4 +1,6 @@
 
+#include <time.h>
+
 #include "hash.h"
 
 /*
@@ -7,7 +9,7 @@ of 64 bits (need to padd the data)
 */
 
 // computes 64 bit hash
-uint64_t compute_hash(void * data, size_t l)
+uint64_t compute_hash(const void * data, size_t l)
 {
   uint32_t i;
   struct fhash hstrct = {0};

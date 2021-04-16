@@ -14,7 +14,7 @@ struct fhash {
     uint64_t d;
 };
 
-uint64_t compute_hash(void * data, size_t l);
+uint64_t compute_hash(const void * data, size_t l);
 
 uint64_t random64bit();
 
