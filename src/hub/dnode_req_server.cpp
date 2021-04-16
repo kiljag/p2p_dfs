@@ -56,7 +56,8 @@ void handle_new_node_join(int dnode_sockfd) {
     // fill up dnode details
     struct dnode_struct *dnode_details = (struct dnode_struct *)malloc(sizeof(struct dnode_struct));
     dnode_details->uid = dnode_id;
-    dnode_details->ip = node_join_req.ip;
+    // dnode_details->ip = node_join_req.ip;
+    memcpy(dnode_details->ip, node_join_req.ip, strlen(node_join_req.ip) + 1);
     dnode_details->port = node_join_req.port;
     dnode_details->flags = 0; /*TODO :*/
 
@@ -91,7 +92,8 @@ void handle_node_hello(int dnode_sockfd) {
     }
      
     dnode_details->uid = node_hello_req.dnode_id;
-    dnode_details->ip = node_hello_req.ip;
+    // dnode_details->ip = node_hello_req.ip;
+    memcpy(dnode_details->ip, node_hello_req.ip, strlen(node_hello_req.ip) + 1);
     dnode_details->port = node_hello_req.port;
     dnode_details->flags = 0; /*TODO :*/
 
@@ -187,7 +189,8 @@ void handle_file_download_req(int dnode_sockfd) {
 
     for(int i=0; i < dnode_ids.size(); i++) {
         struct dnode_struct *dnode = dnodes_map[dnode_ids[i]];
-        peer_dnodes_list[i].ip = dnode->ip;
+        // peer_dnodes_list[i].ip = dnode->ip;
+        memcpy(peer_dnodes_list[i].ip, dnode->ip, strlen(dnode->ip) + 1);
         peer_dnodes_list[i].port = dnode->port;
         peer_dnodes_list[i].flags = 0;
     }

@@ -31,34 +31,11 @@ int main(int argc, char* argv[]) {
     std::cout << "dnode ip:port ::" << argv[1] << std::endl;
     std::cout << "command :: " << argv[2] << std::endl;
     std::cout << "file path/name :: " << argv[3] << std::endl;
-    
-    struct in_addr dnode_ip_addr = parse_ip_addr(argv[1]);
+
+    char dnode_ip_addr[16];
+    parse_ip_addr(argv[1], dnode_ip_addr);
     short dnode_port = parse_port(argv[1]);
 
-
-    // int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    // if (sockfd < 0){
-    //     perror("failed to create socket\n");
-    //     exit(0);
-    // }
-
-    // struct sockaddr_in serv_addr;
-
-    // // fill dnode server details
-    // serv_addr.sin_family = AF_INET;
-    // inet_aton("127.0.0.1", &serv_addr.sin_addr);
-    // // memcpy(&serv_addr.sin_addr, &dnode_ip_addr, sizeof(dnode_ip_addr));
-    // serv_addr.sin_port = htons(dnode_port);
-
-    
-
-    
-    // if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-    //     perror("unable to connect to server..\n");
-    //     exit(0);
-    // }
-
-    std::cout << "RPC :: connecting to dnode.. " << std::endl;
     int dnode_sockfd = connect_to_server(dnode_ip_addr, dnode_port);
     std::cout << "RPC :: connected to dnode.." << std::endl;
 

@@ -2,19 +2,56 @@
 #include <string>
 
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <netdb.h>
+
 
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <netinet/in.h>
+#include <net/if.h>
 #include <arpa/inet.h>
 
 #include "net.h"
 
 using namespace std;
+
+
+void get_ip_address(struct in_addr *ip_addr) {
+
+    char host_buffer[256];
+
+    // retrive host name
+    int hostname = gethostname(host_buffer, sizeof(host_buffer));
+    if (hostname < 0) {
+        perror("gethostname failed\n");
+        inet_aton("127.0.0.1", ip_addr);
+        return;
+    }
+
+    // retrieve host information
+    struct hostent *host_entry = gethostbyname(host_buffer);
+    if (host_entry == NULL) {
+        perror("gethostname failed!!");
+        inet_aton("127.0.0.1", ip_addr);
+        return;
+    }
+    
+    printf("num_interfaces : %d\n", host_entry->h_length);
+    // printf("test1");
+    struct in_addr *host_addr = ((struct in_addr*)host_entry->h_addr_list[0]);
+    memcpy(ip_addr, ip_addr, sizeof(struct in_addr));
+
+    char *ip_buffer = inet_ntoa(*host_addr);
+    printf("ip : %s", ip_buffer);
+
+    return;
+}
+
 
 int create_server(short port) {
 
@@ -47,7 +84,7 @@ int stop_server(int sockfd) {
     close(sockfd);
 }
 
-int connect_to_server(struct in_addr server_ip, short server_port) {
+int connect_to_server(char *server_ip_str, short server_port) {
 
     // create a socket to contact hub
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -56,10 +93,12 @@ int connect_to_server(struct in_addr server_ip, short server_port) {
         return -1;
     }
     
+    //
+    printf("connecting to (%s:%d)\n", server_ip_str, (int)server_port);
+
     struct sockaddr_in serv_addr;
     serv_addr.sin_family	= AF_INET;
-    inet_aton("127.0.0.1", &serv_addr.sin_addr);
-    // serv_addr.sin_addr = server_port;
+    inet_aton(server_ip_str, &serv_addr.sin_addr);
     serv_addr.sin_port = htons(server_port);
     
     // connect to hub
@@ -71,22 +110,22 @@ int connect_to_server(struct in_addr server_ip, short server_port) {
     return sockfd;
 }
 
+
 int disconnect_from_server(int sockfd) {
     close(sockfd);
 }
 
 
-
-struct in_addr parse_ip_addr(char *ip_port) {
+void parse_ip_addr(char *ip_port, char *ip_addr) {
     
     std::string ip_port_str(ip_port);
     int del_pos = ip_port_str.find(":");
     std::string ip_addr_str = ip_port_str.substr(0, del_pos);
 
-    struct in_addr ip_addr;
-    inet_aton(ip_addr_str.c_str(), &ip_addr);
-    
-    return ip_addr;
+    std::cout << "parsed_ip_address : " << ip_addr_str << std::endl;
+    memcpy(ip_addr, ip_addr_str.c_str(), ip_addr_str.size() + 1);
+
+    return;
 }
 
 short parse_port(char *ip_port) {

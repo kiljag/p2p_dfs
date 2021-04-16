@@ -49,9 +49,11 @@ struct file_data_res_struct {
 };
 
 struct dnode_details_struct {
-    struct in_addr hub_ip;
+    // struct in_addr hub_ip;
+    char hub_ip[16];
     short hub_port;
-    struct in_addr dnode_ip;
+    // struct in_addr dnode_ip;
+    char dnode_ip[16];
     short hub_cmd_port;
     short dnode_data_port;
     short rpc_port;
@@ -68,7 +70,8 @@ struct dt_thread_args_struct {
 
 
 struct download_src_dnode_struct {
-    struct in_addr ip;
+    // struct in_addr ip;
+    char ip[16];
     short port;
     int is_online;
     int chunks_served;

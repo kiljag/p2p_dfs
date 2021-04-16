@@ -24,7 +24,6 @@
 #define HUB_QUERY_FILE_SRCS  0x00010003
 
 
-
 struct hub_cmd_struct {
     uint32_t cmd_type;
 };
@@ -39,10 +38,13 @@ inline void send_cmd_to_hub(int hub_sockfd, uint16_t command) {
 
 struct hub_details_struct {
     uint64_t uid;
-    struct in_addr hub_ip;
+    // struct in_addr hub_ip;
+    char hub_ip[16];
     int hub_cmd_port;
     int dnode_cmd_port;
     char hub_root_dir[512];
+    char chunk_hashes_dir[512];
+    char uid_file_path[512];
 };
 
 // hub only data structures
@@ -50,14 +52,16 @@ struct hub_details_struct {
 // store details about a peer hub
 struct peer_hub_struct {
     uint64_t uid;
-    struct in_addr ip;
+    // struct in_addr ip;
+    char ip[16];
     short port;
     uint16_t flags;
 };
 
 struct dnode_struct{ // details about a dnode
     uint64_t uid;
-    struct in_addr ip;
+    // struct in_addr ip;
+    char ip[16];
     short port;
     uint16_t flags;
 };
@@ -72,7 +76,8 @@ struct file_metadata_struct { // details about a file
 // public data structures (hub and peer dnodes)
 
 struct peer_dnode_struct {
-    struct in_addr ip;
+    // struct in_addr ip;
+    char ip[16];
     short port;
     short flags;
 };
@@ -80,7 +85,8 @@ struct peer_dnode_struct {
 // NEW_NODE_JOIN
 
 struct node_join_req_struct {
-    struct in_addr ip;
+    // struct in_addr ip;
+    char ip[16];
     short port;
     uint16_t flags;
 };
@@ -92,7 +98,8 @@ struct node_join_res_struct {
 // NODE HELLO
 struct node_hello_req_struct {
     uint64_t dnode_id;
-    struct in_addr ip;
+    // struct in_addr ip;
+    char ip[16];
     short port;
     uint16_t flags;
 };
@@ -145,7 +152,8 @@ struct file_downloaded_ack_struct {
 
 struct hub_join_req_struct {
     uint64_t uid;
-    struct in_addr ip;
+    // struct in_addr ip;
+    char ip[16];
     short port;
     int flags;
 };
@@ -165,7 +173,8 @@ struct query_file_srcs_res_struct {
 
 struct src_dnode_struct {
     uint64_t dnode_id;
-    struct in_addr ip;
+    // struct in_addr ip;
+    char ip[16];
     short port;
     int flags;
 };

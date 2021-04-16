@@ -63,7 +63,8 @@ void handle_hub_join(int peer_hubfd) {
     }
 
     peer_hub_details->uid = hub_join_req.uid;
-    peer_hub_details->ip = hub_join_req.ip;
+    // peer_hub_details->ip = hub_join_req.ip;
+    memcpy(peer_hub_details->ip, hub_join_req.ip, strlen(hub_join_req.ip) + 1);
     peer_hub_details->port = hub_join_req.port;
 
     // save peer hub details
@@ -96,7 +97,8 @@ void handle_query_for_file_srcs(int peer_hubfd) {
     for(int i=0; i < dnode_ids.size(); i++) {
         struct dnode_struct *dnode = dnodes_map[dnode_ids[i]];
         src_dnodes_list[i].dnode_id = dnode->uid;
-        src_dnodes_list[i].ip = dnode->ip;
+        // src_dnodes_list[i].ip = dnode->ip;
+        memcpy(src_dnodes_list[i].ip, dnode->ip, strlen(dnode->ip) + 1);
         src_dnodes_list[i].port = dnode->port;
         src_dnodes_list[i].flags = 0;
     }

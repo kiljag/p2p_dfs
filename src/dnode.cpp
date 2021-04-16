@@ -93,7 +93,8 @@ void handle_node_join() {
 
     // send node join request
     struct node_join_req_struct node_join_req;
-    node_join_req.ip = dnode_details.dnode_ip;
+    memcpy(node_join_req.ip, dnode_details.dnode_ip, sizeof(dnode_details.dnode_ip) + 1);
+    // node_join_req.ip = dnode_details.dnode_ip;
     node_join_req.port = dnode_details.dnode_data_port;
     node_join_req.flags = 0;
     send_full(hub_sockfd, &node_join_req, sizeof(node_join_req));
@@ -125,7 +126,8 @@ void handle_node_hello() {
     // send node hello request
     struct node_hello_req_struct node_hello_req;
     node_hello_req.dnode_id = dnode_details.uid;
-    node_hello_req.ip = dnode_details.dnode_ip;
+    // node_hello_req.ip = dnode_details.dnode_ip;
+    memcpy(node_hello_req.ip, dnode_details.dnode_ip, sizeof(dnode_details.dnode_ip) + 1);
     node_hello_req.port = dnode_details.dnode_data_port;
     node_hello_req.flags = 0;
     send_full(hub_sockfd, &node_hello_req, sizeof(node_hello_req));
@@ -144,7 +146,7 @@ cmd : ./dnode dnode_dir hub_ip:port hub_port dnode_port rfc_port
 
 int main(int argc, char* argv[]) {
 
-    if (argc < 6) {
+    if (argc < 7) {
         std::cout << "not enough arguments!!" << endl;
         std::exit(1);
     }
@@ -155,18 +157,25 @@ int main(int argc, char* argv[]) {
     // std::cout << "dnode data port :: " << argv[4] << std::endl;
     // std::cout << "rpc cmd port :: " << argv[5] << std::endl; 
 
-
     // store hub details
-    dnode_details.hub_ip = parse_ip_addr(argv[2]);
+    // dnode_details.hub_ip = parse_ip_addr(argv[2]);
+    parse_ip_addr(argv[2], dnode_details.hub_ip);
     dnode_details.hub_port = parse_port(argv[2]);
-    
-    /*todo : should fill this properly*/
-    inet_aton("localhost", &(dnode_details.dnode_ip));
 
+    std::cout << "parsed_hub_ip : " << dnode_details.hub_ip << std::endl;
+
+    /*todo : should fill this properly*/
+    // inet_aton("127.0.0.1", (dnode_details.dnode_ip));
+    
     // store port details
     dnode_details.hub_cmd_port = (short)atoi(argv[3]);
     dnode_details.dnode_data_port = (short)atoi(argv[4]);
     dnode_details.rpc_port = (short)atoi(argv[5]);
+
+    std::cout << "self ip : " << argv[6] << std::endl;
+    // string self_ip("127.0.0.1");
+    string self_ip(argv[6]);
+    memcpy(dnode_details.dnode_ip, self_ip.c_str(), self_ip.size() + 1);
 
     // initialize dnode
     string dnode_root_dir = string(argv[1]);
@@ -193,6 +202,8 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    sleep(1);
+
     pthread_t data_server_tid;
     if (pthread_create(&data_server_tid, NULL, handle_data_server, NULL) != 0) {
         perror("Failed to create data server thread\n");
@@ -201,24 +212,6 @@ int main(int argc, char* argv[]) {
 
     pthread_join(rpc_server_tid, NULL);
     pthread_join(data_server_tid, NULL);
-
-    
-
-    // pid_t data_server_pid = fork();
-    // if (data_server_pid == 0) {
-    //     handle_data_server();
-    // }
-    // cout << "data server pid : " << data_server_pid << endl;
-
-    // pid_t rpc_server_pid = fork();
-    // if (rpc_server_pid == 0) {
-    //     handle_rpc_server();
-    // }
-    // cout << "rpc server pid : " << rpc_server_pid << endl;
-
-    // int wstatus;
-    // pid_t child_pid = wait(&wstatus);
-    // std::cout << "child pid : " << child_pid << endl;
 
     std::exit(0);
 }
